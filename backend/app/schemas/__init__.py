@@ -35,6 +35,49 @@ from app.schemas.task import (
 from app.schemas.approval import ApprovalActionRequest, ApprovalResponse
 from app.schemas.report import ReportResponse
 from app.schemas.feedback import FeedbackCreate, FeedbackResponse
+from app.schemas.memory import (
+    MemoryCreate,
+    MemoryUpdate,
+    MemoryResponse,
+    MemorySearchQuery,
+    MemorySearchResult,
+    MemoryFeedbackCreate,
+    MemoryFeedbackResponse,
+    MemoryStatsResponse,
+)
+from app.schemas.adaptive import (
+    EngineeringExperienceResponse,
+    ExperienceSearchQuery,
+    ExperienceSearchResult,
+    TaskFailureRecordCreate,
+    TaskFailureRecordResponse,
+    AgentPerformanceMetric,
+    AgentPerformanceResponse,
+    BenchmarkDefinitionResponse,
+    BenchmarkRunResponse,
+    BenchmarkExecutionRequest,
+    BenchmarkSummaryResponse,
+    AdaptiveFeedbackCreate,
+    AdaptiveFeedbackResponse,
+)
+
+from app.schemas.flaky_test import (
+    FlakyTestRecordResponse,
+    RepositoryStabilitySummaryResponse,
+)
+from app.schemas.recovery import (
+    TaskResumeRequest,
+    TaskResumeResponse,
+    TaskRecoveryStatusResponse,
+    CheckpointSummary,
+    InterruptedTaskItem,
+    InterruptedTaskScanResponse,
+)
+from app.schemas.model_health import (
+    ModelCircuitBreakerStatus,
+    ModelGatewayMetrics,
+    ModelGatewayHealthResponse,
+)
 
 __all__ = [
     "ErrorBody",
@@ -62,4 +105,21 @@ __all__ = [
     "ReportResponse",
     "FeedbackCreate",
     "FeedbackResponse",
+    "MemoryCreate",
+    "MemoryUpdate",
+    "MemoryResponse",
+    "MemorySearchQuery",
+    "MemorySearchResult",
+    "MemoryFeedbackCreate",
+    "MemoryFeedbackResponse",
+    "MemoryStatsResponse",
+    "TaskResumeRequest",
+    "TaskResumeResponse",
+    "TaskRecoveryStatusResponse",
+    "CheckpointSummary",
+    "InterruptedTaskItem",
+    "InterruptedTaskScanResponse",
+    "ModelCircuitBreakerStatus",
+    "ModelGatewayMetrics",
+    "ModelGatewayHealthResponse",
 ]

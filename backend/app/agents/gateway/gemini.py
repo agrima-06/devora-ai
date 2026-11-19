@@ -8,16 +8,18 @@ from google.genai import types
 from pydantic import BaseModel, ValidationError
 
 from app.agents.gateway.base import BaseLLMProvider
+from app.agents.gateway.exceptions import (
+    InvalidStructuredOutputError,
+    LLMGenerationError,
+    ModelGatewayException,
+    classify_provider_exception,
+    scrub_credentials,
+)
 from app.core.exceptions import DevoraException
 from app.core.logging import get_logger
 
 logger = get_logger("gemini_provider")
 T = TypeVar("T", bound=BaseModel)
-
-
-class LLMGenerationError(DevoraException):
-    """Raised when LLM output generation or schema validation fails."""
-    pass
 
 
 class GeminiProvider(BaseLLMProvider):
@@ -27,9 +29,10 @@ class GeminiProvider(BaseLLMProvider):
         self,
         api_key: str,
         model_name: str = "gemini-2.5-flash",
-        max_retries: int = 3,
+        max_retries: int = 1,
         concurrency_limit: int = 5,
     ):
+        self.provider_name = "gemini"
         self.api_key = api_key
         self.model_name = model_name
         self.max_retries = max_retries
@@ -105,8 +108,13 @@ class GeminiProvider(BaseLLMProvider):
                     )
                     await asyncio.sleep(2 ** attempt)
 
-            raise LLMGenerationError(
-                f"Failed to generate valid structured response for {response_model.__name__} after {self.max_retries} attempts: {str(last_err)}"
+            if isinstance(last_err, (ValidationError, json.JSONDecodeError)):
+                raise InvalidStructuredOutputError(
+                    f"Failed to generate valid structured response for {response_model.__name__}: {scrub_credentials(str(last_err))}"
+                )
+            base_exc = classify_provider_exception(last_err or Exception("Gemini generation failed"))
+            raise type(base_exc)(
+                f"Failed to generate valid structured response for {response_model.__name__}: {base_exc.message}"
             )
 
     async def generate_text(
@@ -135,7 +143,7 @@ class GeminiProvider(BaseLLMProvider):
                     return text, usage
                 except Exception as exc:
                     if attempt == self.max_retries:
-                        raise LLMGenerationError(f"Gemini text generation failed: {str(exc)}")
+                        raise classify_provider_exception(exc)
                     await asyncio.sleep(2 ** attempt)
 
     def _extract_usage(self, response: Any) -> Dict[str, Any]:
@@ -149,3 +157,34 @@ class GeminiProvider(BaseLLMProvider):
         except Exception:
             pass
         return usage
+
+    async def generate_embedding(self, text: str) -> List[float]:
+        """Generate 768-dim normalized semantic embedding vector using Gemini."""
+        if not text:
+            return [0.0] * 768
+
+        from app.config import settings
+        from app.services.repo_intelligence_service import generate_embedding_vector
+
+        async with self.semaphore:
+            for attempt in range(1, self.max_retries + 1):
+                try:
+                    res = await self.client.aio.models.embed_content(
+                        model=settings.GEMINI_EMBEDDING_MODEL,
+                        contents=text,
+                    )
+                    if hasattr(res, "embedding") and hasattr(res.embedding, "values"):
+                        values = list(res.embedding.values)
+                        if len(values) == 768:
+                            return values
+                    elif hasattr(res, "embeddings") and res.embeddings:
+                        values = list(res.embeddings[0].values)
+                        if len(values) == 768:
+                            return values
+                    return generate_embedding_vector(text, dim=768)
+                except Exception as exc:
+                    logger.warning("gemini_embedding_retry", attempt=attempt, error=str(exc))
+                    if attempt == self.max_retries:
+                        return generate_embedding_vector(text, dim=768)
+                    await asyncio.sleep(2 ** attempt)
+        return generate_embedding_vector(text, dim=768)

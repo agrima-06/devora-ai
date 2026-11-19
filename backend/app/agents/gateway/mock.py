@@ -24,7 +24,9 @@ T = TypeVar("T", bound=BaseModel)
 class MockLLMProvider(BaseLLMProvider):
     """Deterministic Mock LLM Provider supplying realistic responses without network calls."""
 
-    def __init__(self):
+    def __init__(self, model_name: str = "mock-model"):
+        self.provider_name = "mock"
+        self.model_name = model_name
         self._custom_responses: Dict[Type[BaseModel], BaseModel] = {}
         self.call_history: List[Dict[str, Any]] = []
 
@@ -186,3 +188,8 @@ class MockLLMProvider(BaseLLMProvider):
             )
 
         raise ValueError(f"No mock generator defined for {model_class}")
+
+    async def generate_embedding(self, text: str) -> List[float]:
+        """Generate 768-dim normalized pseudo-random projection vector for offline/testing."""
+        from app.services.repo_intelligence_service import generate_embedding_vector
+        return generate_embedding_vector(text, dim=768)

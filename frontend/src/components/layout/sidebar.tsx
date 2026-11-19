@@ -6,11 +6,14 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   GitBranch,
+  GitPullRequest,
   CheckSquare,
   FileText,
   Settings,
   Terminal,
   Cpu,
+  Sparkles,
+  Activity,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -19,7 +22,10 @@ import { useAuth } from "@/lib/auth-context";
 const navItems = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { name: "Repositories", href: "/repositories", icon: GitBranch },
+  { name: "GitHub Apps", href: "/github", icon: GitPullRequest },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
+  { name: "Adaptive Engine", href: "/adaptive", icon: Activity },
+  { name: "ML Intelligence", href: "/ml", icon: Sparkles },
   { name: "Reports", href: "/reports", icon: FileText },
   { name: "Settings", href: "/settings", icon: Settings },
 ];

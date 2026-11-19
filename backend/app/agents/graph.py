@@ -8,6 +8,7 @@ from app.agents.specialists.bug_investigator import bug_investigator_node
 from app.agents.specialists.code_reviewer import code_reviewer_node
 from app.agents.specialists.codebase_analyst import codebase_analyst_node
 from app.agents.specialists.coder import coder_node
+from app.agents.specialists.ml_classifier import ml_classifier_node
 from app.agents.specialists.orchestrator import orchestrator_node
 from app.agents.specialists.planner import planner_node
 from app.agents.specialists.reporter import reporter_node
@@ -39,14 +40,14 @@ def human_approval_node(state: DevoraWorkflowState) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def route_after_analysis(state: DevoraWorkflowState) -> Literal["bug_investigator", "planner", "reporter"]:
+def route_after_analysis(state: DevoraWorkflowState) -> Literal["ml_classifier", "planner", "reporter"]:
     """Route after Codebase Analyst based on task category."""
     task_type = state.get("task_type", "bug_fix")
     if task_type == "exploration":
         # Pure exploration does not modify code or run tests
         return "reporter"
     elif task_type == "bug_fix":
-        return "bug_investigator"
+        return "ml_classifier"
     else:
         # feature or refactor
         return "planner"
@@ -58,6 +59,42 @@ def route_after_tester(state: DevoraWorkflowState) -> Literal["code_reviewer", "
     passed = test_results.get("passed", False)
 
     if passed:
+        return "code_reviewer"
+
+    # If the failure was due to resource limits, missing runners, timeouts, or environment constraints, do not waste LLM repair loops
+    exec_status = test_results.get("execution_status")
+    failure_class = test_results.get("failure_classification")
+    exit_class = test_results.get("exit_classification")
+    oom_killed = test_results.get("oom_killed", False)
+
+    if (
+        oom_killed
+        or exec_status in ("UNAVAILABLE", "OOM_KILLED", "TIMED_OUT")
+        or failure_class in (
+            "RUNNER_UNAVAILABLE",
+            "OOM_KILLED",
+            "RESOURCE_EXHAUSTED",
+            "TIMEOUT",
+            "EXECUTION_TIMEOUT",
+            "COMMAND_NOT_FOUND",
+            "COMMAND_NOT_EXECUTABLE",
+            "SANDBOX_STARTUP_FAILURE",
+        )
+        or exit_class in (
+            "OOM_KILLED",
+            "TIMEOUT",
+            "COMMAND_NOT_FOUND",
+            "COMMAND_NOT_EXECUTABLE",
+            "SANDBOX_STARTUP_FAILURE",
+            "RUNNER_UNAVAILABLE",
+        )
+    ):
+        return "reporter"
+
+    # If test failure was confirmed non-deterministic (FLAKY), do not waste LLM repair loops
+    is_flaky = test_results.get("is_flaky", False)
+    stability_class = test_results.get("stability_classification")
+    if is_flaky or stability_class == "FLAKY":
         return "code_reviewer"
 
     # Test failed: check bounded retry limit
@@ -112,6 +149,7 @@ def create_workflow_graph(
     # 1. Register Nodes
     builder.add_node("orchestrator", orchestrator_node)
     builder.add_node("codebase_analyst", codebase_analyst_node)
+    builder.add_node("ml_classifier", ml_classifier_node)
     builder.add_node("bug_investigator", bug_investigator_node)
     builder.add_node("planner", planner_node)
     builder.add_node("coder", coder_node)
@@ -125,6 +163,7 @@ def create_workflow_graph(
     # 2. Add Fixed Edges
     builder.add_edge(START, "orchestrator")
     builder.add_edge("orchestrator", "codebase_analyst")
+    builder.add_edge("ml_classifier", "bug_investigator")
     builder.add_edge("bug_investigator", "planner")
     builder.add_edge("planner", "coder")
     builder.add_edge("coder", "tester")
@@ -137,7 +176,7 @@ def create_workflow_graph(
         "codebase_analyst",
         route_after_analysis,
         {
-            "bug_investigator": "bug_investigator",
+            "ml_classifier": "ml_classifier",
             "planner": "planner",
             "reporter": "reporter",
         },

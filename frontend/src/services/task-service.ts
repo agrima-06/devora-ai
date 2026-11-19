@@ -3,8 +3,11 @@ import {
   AgentRun,
   Approval,
   FileChange,
+  InterruptedTaskScanResponse,
   Report,
   Task,
+  TaskRecoveryStatusResponse,
+  TaskResumeResponse,
   TaskStatus,
   TestRun,
 } from "@/types";
@@ -83,6 +86,23 @@ export const taskService = {
     return apiClient<Approval>(`/api/v1/tasks/${id}/approval`, {
       method: "POST",
       body: JSON.stringify({ action, notes }),
+    });
+  },
+
+  async resume(id: string, force: boolean = false): Promise<TaskResumeResponse> {
+    return apiClient<TaskResumeResponse>(`/api/v1/tasks/${id}/resume`, {
+      method: "POST",
+      body: JSON.stringify({ force }),
+    });
+  },
+
+  async getRecoveryStatus(id: string): Promise<TaskRecoveryStatusResponse> {
+    return apiClient<TaskRecoveryStatusResponse>(`/api/v1/tasks/${id}/recovery`);
+  },
+
+  async scanInterrupted(): Promise<InterruptedTaskScanResponse> {
+    return apiClient<InterruptedTaskScanResponse>("/api/v1/tasks/recovery/scan", {
+      method: "POST",
     });
   },
 };

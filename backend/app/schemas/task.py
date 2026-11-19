@@ -54,7 +54,15 @@ class TaskResponse(BaseModel):
     status: str
     iterations_count: int
     target_branch: str
+    task_branch: Optional[str] = None
+    commit_sha: Optional[str] = None
     pull_request_url: Optional[str] = None
+    recovery_status: str = "NOT_REQUIRED"
+    recovery_attempts: int = 0
+    last_heartbeat_at: Optional[datetime] = None
+    recovery_lease_owner: Optional[str] = None
+    recovery_lease_expires_at: Optional[datetime] = None
+    recovery_error: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -104,6 +112,19 @@ class TestRunResponse(BaseModel):
     stderr: Optional[str] = None
     duration_seconds: float
     created_at: datetime
+
+    # Sandbox Resilience & Resource Telemetry (Phase 9 Stage 9.3)
+    peak_memory_rss_bytes: Optional[int] = None
+    peak_memory_rss_mb: Optional[float] = None
+    cpu_time_seconds: Optional[float] = None
+    wall_time_seconds: Optional[float] = None
+    memory_limit_bytes: Optional[int] = None
+    memory_limit_mb: Optional[float] = None
+    cpu_limit: Optional[float] = None
+    oom_killed: bool = False
+    termination_reason: Optional[str] = None
+    exit_classification: str = "EXECUTION_FAILURE"
+    resource_telemetry_available: bool = False
 
 
 class StartWorkflowResponse(BaseModel):

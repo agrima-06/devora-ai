@@ -15,6 +15,7 @@ from app.models.indexing_job import IndexingJob
 from app.models.repository import Repository
 from app.models.repository_file import RepositoryFile
 from app.models.repository_knowledge import RepositoryKnowledge
+from app.models.repository_memory import RepositoryMemory
 from app.models.user import User
 from app.services.github_service import GitHubService
 from app.services.parser_service import CodeParserService
@@ -211,9 +212,64 @@ class RepositoryIntelligenceService:
                 )
             )
 
+            # Store initial semantic memories for Phase 5 Vector Memory Engine
+            memory_records = [
+                RepositoryMemory(
+                    repository_id=repo.id,
+                    category="architecture",
+                    title="Repository Architecture & Layout",
+                    content=arch_summary,
+                    embedding=generate_embedding_vector(f"architecture {arch_summary}"),
+                    source_reference="ARCHITECTURE.md",
+                    commit_sha=commit_sha,
+                    verification_status="observed_fact",
+                    access_scope="repository",
+                    is_stale=False,
+                    meta_info={"frameworks": scan_result["frameworks"], "entry_points": scan_result["entry_points"]},
+                ),
+                RepositoryMemory(
+                    repository_id=repo.id,
+                    category="coding_conventions",
+                    title="Coding & Design Conventions",
+                    content=conventions_summary,
+                    embedding=generate_embedding_vector(f"coding conventions {conventions_summary}"),
+                    source_reference="CONVENTIONS.md",
+                    commit_sha=commit_sha,
+                    verification_status="observed_fact",
+                    access_scope="repository",
+                    is_stale=False,
+                    meta_info={"primary_language": scan_result["primary_language"]},
+                ),
+            ]
+
+            # If frameworks detected, add framework_usage memory
+            if scan_result.get("frameworks"):
+                frameworks_str = ", ".join(scan_result["frameworks"])
+                fw_content = (
+                    f"Primary frameworks used in this repository: {frameworks_str}.\n"
+                    f"Language: {scan_result['primary_language']}.\n"
+                    f"Manifests detected: {', '.join(scan_result.get('manifests', []))}."
+                )
+                memory_records.append(
+                    RepositoryMemory(
+                        repository_id=repo.id,
+                        category="framework_usage",
+                        title=f"Framework Usage: {frameworks_str}",
+                        content=fw_content,
+                        embedding=generate_embedding_vector(f"frameworks libraries {fw_content}"),
+                        source_reference="manifests",
+                        commit_sha=commit_sha,
+                        verification_status="observed_fact",
+                        access_scope="repository",
+                        is_stale=False,
+                        meta_info={"frameworks": scan_result["frameworks"]},
+                    )
+                )
+
             # Batch add records
             db.add_all(file_records)
             db.add_all(knowledge_records)
+            db.add_all(memory_records)
 
             # 8. Complete job and update repository status
             job.status = "COMPLETED"

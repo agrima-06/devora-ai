@@ -244,3 +244,82 @@ def test_ok():
     report_record = (await pg_session.execute(select(Report).where(Report.task_id == uuid.UUID(task_id)))).scalar_one_or_none()
     assert report_record is not None, "Report must be persisted in PostgreSQL after resumed execution"
     assert len(report_record.markdown_content) > 0
+
+
+@pytest.mark.asyncio
+async def test_postgres_pgvector_semantic_memory_search(
+    pg_client: AsyncClient,
+    pg_session: AsyncSession,
+    pg_test_user: User,
+    pg_auth_headers: dict,
+    mock_gw,
+):
+    """Verify real pgvector <=> cosine distance operators and repository_memories storage in PostgreSQL 16."""
+    from app.models.project import Project
+    from app.models.repository import Repository
+    from app.services.memory_service import MemoryService
+
+    # 1. Create Project and Repo
+    proj = Project(
+        name="Memory Test Proj",
+        slug=f"mem-proj-{uuid.uuid4().hex[:6]}",
+        owner_id=pg_test_user.id,
+    )
+    pg_session.add(proj)
+    await pg_session.commit()
+    await pg_session.refresh(proj)
+
+    repo = Repository(
+        project_id=proj.id,
+        user_id=pg_test_user.id,
+        name="memory-repo",
+        full_name="devora/memory-repo",
+        clone_url="https://github.com/devora/memory-repo.git",
+        default_branch="main",
+        language="Python",
+        meta_info={},
+    )
+    pg_session.add(repo)
+    await pg_session.commit()
+    await pg_session.refresh(repo)
+
+    mem_service = MemoryService()
+
+    # 2. Insert memory into PostgreSQL
+    mem1 = await mem_service.create_or_update_memory(
+        repository_id=repo.id,
+        category="coding_conventions",
+        title="Async SQLAlchemy Patterns",
+        content="Always use async with async_sessionmaker for database transactions in backend services.",
+        user=pg_test_user,
+        db=pg_session,
+        verification_status="developer_confirmed",
+    )
+    await pg_session.commit()
+
+    # 3. Query PostgreSQL directly using native pgvector <=> cosine distance operator
+    res = await pg_session.execute(
+        text("""
+            SELECT id, title, category, 1 - (embedding <=> CAST(:query_vec AS vector)) as similarity
+            FROM repository_memories
+            WHERE repository_id = :repo_id
+            ORDER BY embedding <=> CAST(:query_vec AS vector) ASC
+            LIMIT 1
+        """),
+        {"repo_id": repo.id, "query_vec": str(mem1.embedding)},
+    )
+    row = res.fetchone()
+    assert row is not None
+    assert str(row[0]) == str(mem1.id)
+    assert row[1] == "Async SQLAlchemy Patterns"
+    assert float(row[3]) > 0.99  # Identical vector cosine similarity is 1.0
+
+    # 4. Search via MemoryService
+    search_results = await mem_service.search_memories(
+        repository_id=repo.id,
+        query="Async SQLAlchemy database transactions",
+        user=pg_test_user,
+        db=pg_session,
+    )
+    assert len(search_results) >= 1
+    assert search_results[0]["id"] == str(mem1.id)

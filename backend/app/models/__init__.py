@@ -17,6 +17,17 @@ from app.models.indexing_job import IndexingJob
 from app.models.repository_file import RepositoryFile
 from app.models.workflow_event import WorkflowEvent
 from app.models.workflow_checkpoint import WorkflowCheckpoint
+from app.models.repository_memory import RepositoryMemory
+from app.models.memory_feedback import MemoryFeedback
+from app.models.ml_prediction import MLPrediction
+from app.models.ml_model_metadata import MLModelMetadata
+from app.models.task_failure_record import TaskFailureRecord
+from app.models.benchmark import BenchmarkDefinition, BenchmarkRun
+from app.models.github_installation import GitHubInstallation
+from app.models.github_pull_request import GitHubPullRequest
+from app.models.git_branch import GitBranch
+from app.models.flaky_test_record import FlakyTestRecord
+from app.models.model_gateway_health import ModelGatewayHealth
 
 __all__ = [
     "Base",
@@ -37,4 +48,17 @@ __all__ = [
     "RepositoryFile",
     "WorkflowEvent",
     "WorkflowCheckpoint",
+    "RepositoryMemory",
+    "MemoryFeedback",
+    "MLPrediction",
+    "MLModelMetadata",
+    "TaskFailureRecord",
+    "BenchmarkDefinition",
+    "BenchmarkRun",
+    "GitHubInstallation",
+    "GitHubPullRequest",
+    "GitBranch",
+    "FlakyTestRecord",
+    "ModelGatewayHealth",
 ]
+

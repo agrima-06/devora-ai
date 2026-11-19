@@ -73,13 +73,17 @@ async def coder_node(state: DevoraWorkflowState) -> Dict[str, Any]:
 
     files_context = "\n".join(file_snippets) if file_snippets else "No existing files read."
 
+    memory_context = state.get("memory_context_summary") or ""
+    conventions_block = f"Project Conventions & Architectural Patterns:\n{memory_context}\n\n" if memory_context else ""
+
     prompt = (
         f"Task Description: {task_desc}\n\n"
         f"Plan Objective: {plan.get('objective', '')}\n"
         f"Plan Steps: {plan.get('steps', [])}\n\n"
+        f"{conventions_block}"
         f"Existing Workspace Files:\n{files_context}\n"
         f"{retry_context}\n\n"
-        f"Produce the structured code changes to implement the solution."
+        f"Produce the structured code changes to implement the solution adhering to project conventions."
     )
 
     coding_res: CodingOutput = await gateway.generate_structured(

@@ -8,10 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.core.exceptions import ConflictException, NotFoundException
+from app.models.git_branch import GitBranch
 from app.models.indexing_job import IndexingJob
 from app.models.project import Project
 from app.models.repository import Repository
 from app.models.user import User
+from app.services.github_app_service import GitHubAppService
 from app.schemas.repository import (
     CodeSearchResponse,
     IndexRepositoryRequest,
@@ -341,3 +343,79 @@ async def search_code(
         limit=limit,
     )
     return CodeSearchResponse(**res)
+
+
+@router.get(
+    "/{repo_id}/branches",
+    summary="List all branches for a repository",
+)
+async def list_repository_branches(
+    repo_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """List both remote tracking branches and autonomous Devora task branches."""
+    # Verify repository ownership
+    repo_res = await db.execute(
+        select(Repository).where(Repository.id == repo_id, Repository.user_id == current_user.id)
+    )
+    repo = repo_res.scalar_one_or_none()
+    if not repo:
+        raise NotFoundException("Repository", repo_id)
+
+    # 1. Fetch tracked task branches from database
+    branch_stmt = select(GitBranch).where(GitBranch.repository_id == repo.id).order_by(GitBranch.created_at.desc())
+    branch_res = await db.execute(branch_stmt)
+    db_branches = branch_res.scalars().all()
+
+    branch_map: dict = {}
+
+    # Default branch
+    default_b = repo.default_branch or "main"
+    branch_map[default_b] = {
+        "name": default_b,
+        "commit_sha": repo.current_commit_sha,
+        "is_default": True,
+        "is_task_branch": False,
+        "is_pushed": True,
+        "task_id": None,
+    }
+
+    # DB branches
+    for b in db_branches:
+        branch_map[b.branch_name] = {
+            "name": b.branch_name,
+            "commit_sha": b.commit_sha,
+            "is_default": b.branch_name == default_b,
+            "is_task_branch": True,
+            "is_pushed": b.is_pushed,
+            "task_id": str(b.task_id),
+        }
+
+    # If repo has GitHub installation, query remote branches
+    if repo.clone_url and repo.installation_id:
+        try:
+            gh_app = GitHubAppService()
+            owner, repo_name = "devora-org", "sample-repo"
+            try:
+                from app.services.github_service import GitHubService
+                owner, repo_name = GitHubService.parse_github_url(repo.clone_url)
+            except Exception:
+                pass
+            token = await gh_app.get_installation_access_token(repo.installation_id)
+            remote_branches = await gh_app.list_branches(owner, repo_name, token)
+            for rb in remote_branches:
+                r_name = rb.get("name")
+                if r_name and r_name not in branch_map:
+                    branch_map[r_name] = {
+                        "name": r_name,
+                        "commit_sha": rb.get("commit", {}).get("sha"),
+                        "is_default": r_name == default_b,
+                        "is_task_branch": False,
+                        "is_pushed": True,
+                        "task_id": None,
+                    }
+        except Exception:
+            pass
+
+    return list(branch_map.values())

@@ -19,7 +19,16 @@ from app.models.repository import Repository
 from app.models.task import Task
 from app.models.test_run import TestRun
 from app.models.user import User
+from app.models.workflow_checkpoint import WorkflowCheckpoint
 from app.schemas.approval import ApprovalActionRequest, ApprovalResponse
+from app.schemas.recovery import (
+    CheckpointSummary,
+    InterruptedTaskItem,
+    InterruptedTaskScanResponse,
+    TaskRecoveryStatusResponse,
+    TaskResumeRequest,
+    TaskResumeResponse,
+)
 from app.schemas.report import ReportResponse
 from app.schemas.task import (
     AgentRunResponse,
@@ -31,6 +40,7 @@ from app.schemas.task import (
     TaskUpdate,
     TestRunResponse,
 )
+from app.services.recovery_manager import WorkflowRecoveryManager
 from app.services.workflow_service import WorkflowService
 
 router = APIRouter(prefix="/tasks", tags=["Tasks"])
@@ -403,3 +413,113 @@ async def submit_task_approval(
         raise NotFoundException("Approval record", task_id)
 
     return ApprovalResponse.model_validate(approval)
+
+
+@router.post(
+    "/recovery/scan",
+    response_model=InterruptedTaskScanResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Scan and flag interrupted workflows",
+)
+async def scan_interrupted_tasks(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> InterruptedTaskScanResponse:
+    """Scan active tasks for heartbeat timeouts or unhandled termination and flag for recovery."""
+    manager = WorkflowRecoveryManager()
+    items = await manager.scan_and_flag_interrupted_tasks(db)
+    return InterruptedTaskScanResponse(
+        scanned_tasks_count=len(items),
+        interrupted_tasks=[InterruptedTaskItem(**i) for i in items],
+    )
+
+
+@router.get(
+    "/{task_id}/recovery",
+    response_model=TaskRecoveryStatusResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get task workflow recovery status and eligibility",
+)
+async def get_task_recovery_status(
+    task_id: uuid.UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> TaskRecoveryStatusResponse:
+    """Evaluate whether an interrupted task can be safely resumed from its latest checkpoint."""
+    result = await db.execute(
+        select(Task).where(Task.id == task_id, Task.created_by == current_user.id)
+    )
+    task = result.scalar_one_or_none()
+    if not task:
+        raise NotFoundException("Task", task_id)
+
+    manager = WorkflowRecoveryManager()
+    is_interrupted, interruption_reason = manager.check_interruption(task)
+    eligible, elig_reason, checkpoint = await manager.is_eligible_for_recovery(task, db)
+
+    cp_summary = None
+    if checkpoint:
+        cp_summary = CheckpointSummary(
+            checkpoint_id=checkpoint.checkpoint_id,
+            node_name=checkpoint.node_name,
+            step_number=checkpoint.step_number,
+            thread_id=checkpoint.thread_id,
+            created_at=checkpoint.created_at,
+        )
+
+    return TaskRecoveryStatusResponse(
+        task_id=str(task.id),
+        status=task.status,
+        recovery_status=task.recovery_status,
+        is_interrupted=is_interrupted,
+        interruption_reason=interruption_reason,
+        is_eligible_for_recovery=eligible,
+        eligibility_reason=elig_reason,
+        recovery_attempts=task.recovery_attempts,
+        max_recovery_attempts=manager.max_attempts,
+        last_heartbeat_at=task.last_heartbeat_at,
+        recovery_lease_owner=task.recovery_lease_owner,
+        recovery_lease_expires_at=task.recovery_lease_expires_at,
+        recovery_error=task.recovery_error,
+        latest_checkpoint=cp_summary,
+    )
+
+
+@router.post(
+    "/{task_id}/resume",
+    response_model=TaskResumeResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Safely resume an interrupted task from last valid checkpoint",
+)
+async def resume_task(
+    task_id: uuid.UUID,
+    payload: Optional[TaskResumeRequest] = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> TaskResumeResponse:
+    """Resume an interrupted task workflow from its last persisted database checkpoint."""
+    result = await db.execute(
+        select(Task).where(Task.id == task_id, Task.created_by == current_user.id)
+    )
+    task = result.scalar_one_or_none()
+    if not task:
+        raise NotFoundException("Task", task_id)
+
+    force_resume = payload.force if payload else False
+    service = WorkflowService()
+    res = await service.resume_task_workflow(
+        task_id=task_id,
+        user=current_user,
+        db=db,
+        force=force_resume,
+    )
+
+    return TaskResumeResponse(
+        task_id=str(task.id),
+        status=res["status"],
+        recovery_status=res.get("recovery_status", "NOT_REQUIRED"),
+        resumed_from_node=res.get("resumed_from_node", "orchestrator"),
+        step_number=res.get("step_number", 0),
+        recovery_attempts=res.get("recovery_attempts", 0),
+        message=res.get("message", "Task successfully resumed"),
+    )

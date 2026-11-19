@@ -33,6 +33,9 @@ class RepositoryResponse(BaseModel):
     clone_url: str
     default_branch: str
     language: Optional[str] = None
+    installation_id: Optional[int] = None
+    is_private: bool = False
+    permissions: Dict[str, Any] = Field(default_factory=dict)
     current_commit_sha: Optional[str] = None
     indexing_status: str = "NOT_INDEXED"
     last_indexed_at: Optional[datetime] = None

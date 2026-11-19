@@ -29,10 +29,22 @@ async def bug_investigator_node(state: DevoraWorkflowState) -> Dict[str, Any]:
     task_desc = state.get("task_description", "")
     traceback = state.get("error_traceback") or "No traceback provided."
     analysis = state.get("problem_analysis") or {}
+    ml_pred = state.get("ml_bug_prediction") or {}
+
+    ml_context = ""
+    if ml_pred:
+        ml_context = (
+            f"Empirical ML Classifier Prior:\n"
+            f"- Machine-Learned Category: {ml_pred.get('predicted_category')}\n"
+            f"- Model Confidence: {ml_pred.get('confidence', 0.0) * 100:.1f}%\n"
+            f"- Ambiguity / Low Confidence: {ml_pred.get('is_low_confidence', False)}\n"
+            f"- Diagnostic Warning: {ml_pred.get('warning') or 'High confidence fingerprint'}\n\n"
+        )
 
     prompt = (
         f"Bug Description: {task_desc}\n\n"
         f"Error Traceback / Error Message:\n{traceback}\n\n"
+        f"{ml_context}"
         f"Candidate Files: {analysis.get('candidate_files', [])}\n"
         f"Symbols Involved: {analysis.get('key_symbols', [])}\n"
         f"Architectural Context: {analysis.get('architectural_summary', '')}\n\n"

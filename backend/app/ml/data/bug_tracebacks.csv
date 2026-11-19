@@ -1,0 +1,648 @@
+category,error_message,traceback,context
+syntax_error,SyntaxError: invalid syntax,"  File ""/workspace/app/services/parser.py"", line 42
+    def parse_item(data):
+                        ^
+SyntaxError: invalid syntax",Missing colon or illegal character at function declaration
+syntax_error,IndentationError: unexpected indent,"  File ""/workspace/app/core/config.py"", line 18
+        self.timeout = 30
+IndentationError: unexpected indent",Misaligned indentation block in class definition
+syntax_error,SyntaxError: unexpected EOF while parsing,"  File ""/workspace/app/utils/helpers.py"", line 105
+    if not items:
+                 ^
+SyntaxError: unexpected EOF while parsing",File ended with open parenthesis or incomplete statement
+syntax_error,SyntaxError: closing parenthesis ')' does not match opening parenthesis '[',"  File ""/workspace/app/models/schema.py"", line 64
+    items = [x for x in data)
+                            ^
+SyntaxError: closing parenthesis ')' does not match opening parenthesis '['",Mismatched bracket/parenthesis syntax
+syntax_error,SyntaxError: cannot assign to expression here. Maybe you meant '==' instead of '='?,"  File ""/workspace/app/auth/validator.py"", line 29
+    if user.status = ""ACTIVE"":
+       ^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: cannot assign to expression here. Maybe you meant '==' instead of '='?",Assignment used in conditional expression
+syntax_error,IndentationError: expected an indented block after 'for' statement on line 55,"  File ""/workspace/app/pipelines/runner.py"", line 56
+    print(""done"")
+IndentationError: expected an indented block after 'for' statement on line 55",Empty loop body without pass statement
+syntax_error,SyntaxError: f-string: unmatched '{',"  File ""/workspace/app/views/templates.py"", line 83
+    msg = f""User {user.name has joined""
+                                      ^
+SyntaxError: f-string: unmatched '{'",Unclosed f-string expression
+syntax_error,SyntaxError: positional argument follows keyword argument,"  File ""/workspace/app/clients/http.py"", line 37
+    fetch(url=""https://api.internal"", headers, timeout=10)
+                                      ^^^^^^^
+SyntaxError: positional argument follows keyword argument",Invalid function call argument order
+syntax_error,SyntaxError: non-default argument follows default argument,"  File ""/workspace/app/services/calculator.py"", line 12
+    def compute(base=10, multiplier, offset=0):
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: non-default argument follows default argument",Invalid signature default parameter positioning
+syntax_error,TabError: inconsistent use of tabs and spaces in indentation,"  File ""/workspace/app/legacy/worker.py"", line 91
+    return results
+TabError: inconsistent use of tabs and spaces in indentation",Mixed tab and space characters in code block
+syntax_error,SyntaxError: invalid decimal literal,"  File ""/workspace/app/utils/format.py"", line 5
+    v = 0123
+        ^
+SyntaxError: leading zeros in decimal integer literals are not permitted; use an 0o prefix for octal integers",Invalid octal integer literal
+syntax_error,SyntaxError: unmatched ')',"  File ""/workspace/app/metrics/timer.py"", line 22
+    return (a + b))
+                  ^
+SyntaxError: unmatched ')'",Extra closing parenthesis in return statement
+syntax_error,SyntaxError: 'return' outside function,"  File ""/workspace/app/scripts/setup.py"", line 14
+    return False
+    ^^^^^^^^^^^^
+SyntaxError: 'return' outside function",Top-level return statement outside callable body
+syntax_error,SyntaxError: 'break' outside loop,"  File ""/workspace/app/dispatch/event.py"", line 47
+    if not event:
+        break
+        ^^^^^
+SyntaxError: 'break' outside loop",Break statement placed inside if branch not in a loop
+syntax_error,SyntaxError: trailing comma not allowed without surrounding parentheses in type annotation,"  File ""/workspace/app/types/defs.py"", line 33
+    x: int, str = 1
+          ^
+SyntaxError: invalid syntax",Malformed type annotation declaration
+syntax_error,SyntaxError: Generator expression must be parenthesized,"  File ""/workspace/app/handlers/stream.py"", line 19
+    consume(x * 2 for x in items, True)
+            ^^^^^^^^^^^^^^^^^^^^
+SyntaxError: Generator expression must be parenthesized",Unparenthesized generator passed to multi-argument function
+syntax_error,SyntaxError: duplicate argument 'user_id' in function definition,"  File ""/workspace/app/routes/users.py"", line 8
+    def get_user(user_id: int, user_id: str):
+                                ^^^^^^^
+SyntaxError: duplicate argument 'user_id' in function definition",Duplicate parameter name in definition signature
+syntax_error,SyntaxError: invalid syntax at EOF in string literal,"  File ""/workspace/app/templates/email.py"", line 44
+    body = """"""Welcome to Devora AI
+                                  ^
+SyntaxError: unterminated triple-quoted string literal (detected at line 44)",Unclosed multi-line triple quoted string
+syntax_error,SyntaxError: cannot use 'yield' inside async generator expression,"  File ""/workspace/app/async_tools/iter.py"", line 77
+    res = (yield x async for x in stream)
+           ^^^^^^^
+SyntaxError: 'yield' inside generator expression",Invalid yield keyword placement
+syntax_error,SyntaxError: 'continue' not properly in loop,"  File ""/workspace/app/logic/filter.py"", line 29
+    try:
+        continue
+        ^^^^^^^^
+SyntaxError: 'continue' not properly in loop",Continue statement invalidly scoped outside iteration loop
+import_dependency_error,ModuleNotFoundError: No module named 'fastapi',"Traceback (most recent call last):
+  File ""/workspace/app/main.py"", line 3, in <module>
+    import fastapi
+ModuleNotFoundError: No module named 'fastapi'",Missing top-level framework dependency in virtualenv
+import_dependency_error,ImportError: cannot import name 'AsyncSession' from 'sqlalchemy.orm',"Traceback (most recent call last):
+  File ""/workspace/app/db/session.py"", line 4, in <module>
+    from sqlalchemy.orm import AsyncSession
+ImportError: cannot import name 'AsyncSession' from 'sqlalchemy.orm'",Wrong submodule path or out-of-date library version
+import_dependency_error,ModuleNotFoundError: No module named 'pgvector.sqlalchemy',"Traceback (most recent call last):
+  File ""/workspace/app/models/memory.py"", line 8, in <module>
+    from pgvector.sqlalchemy import Vector
+ModuleNotFoundError: No module named 'pgvector.sqlalchemy'",Uninstalled pgvector extension package
+import_dependency_error,ImportError: cannot import name 'Settings' from partially initialized module 'app.config' (most likely due to a circular import),"Traceback (most recent call last):
+  File ""/workspace/app/main.py"", line 5, in <module>
+    from app.config import Settings
+  File ""/workspace/app/config.py"", line 2, in <module>
+    from app.main import app
+ImportError: cannot import name 'Settings' from partially initialized module 'app.config' (most likely due to a circular import)",Circular dependency deadlock during module evaluation
+import_dependency_error,ModuleNotFoundError: No module named 'scipy',"Traceback (most recent call last):
+  File ""/workspace/app/ml/classifier.py"", line 2, in <module>
+    import scipy.sparse
+ModuleNotFoundError: No module named 'scipy'",Missing scientific compute dependency
+import_dependency_error,ImportError: cannot import name 'BaseModel' from 'pydantic',"Traceback (most recent call last):
+  File ""/workspace/app/schemas/task.py"", line 1, in <module>
+    from pydantic import BaseModel
+ImportError: cannot import name 'BaseModel' from 'pydantic'",Pydantic version conflict or shadowed local file named pydantic.py
+import_dependency_error,ModuleNotFoundError: No module named 'tree_sitter_python',"Traceback (most recent call last):
+  File ""/workspace/app/services/ast.py"", line 6, in <module>
+    import tree_sitter_python
+ModuleNotFoundError: No module named 'tree_sitter_python'",Missing grammar parser dependency
+import_dependency_error,ImportError: libgomp.so.1: cannot open shared object file: No such file or directory,"Traceback (most recent call last):
+  File ""/workspace/app/ml/engine.py"", line 4, in <module>
+    import sklearn
+  File ""/workspace/.venv/lib/python3.11/site-packages/sklearn/__init__.py"", line 82, in <module>
+    from . import _distributor_init
+ImportError: libgomp.so.1: cannot open shared object file: No such file or directory",Missing shared system native library for compiled C extension
+import_dependency_error,ModuleNotFoundError: No module named 'langgraph.checkpoint.base',"Traceback (most recent call last):
+  File ""/workspace/app/agents/graph.py"", line 3, in <module>
+    from langgraph.checkpoint.base import BaseCheckpointSaver
+ModuleNotFoundError: No module named 'langgraph.checkpoint.base'",LangGraph subpackage reorganized or missing version upgrade
+import_dependency_error,ImportError: cannot import name 'field_validator' from 'pydantic' (did you mean 'validator'?),"Traceback (most recent call last):
+  File ""/workspace/app/schemas/project.py"", line 3, in <module>
+    from pydantic import field_validator
+ImportError: cannot import name 'field_validator' from 'pydantic'",Using Pydantic v2 field_validator on older Pydantic v1 install
+import_dependency_error,ModuleNotFoundError: No module named 'google.genai',"Traceback (most recent call last):
+  File ""/workspace/app/agents/gateway.py"", line 5, in <module>
+    import google.genai as genai
+ModuleNotFoundError: No module named 'google.genai'",Google GenAI SDK package uninstalled
+import_dependency_error,ImportError: cannot import name 'urllib3' from 'requests.packages',"Traceback (most recent call last):
+  File ""/workspace/app/tools/fetcher.py"", line 7, in <module>
+    from requests.packages import urllib3
+ImportError: cannot import name 'urllib3' from 'requests.packages'",Vendored urllib3 removal in newer requests versions
+import_dependency_error,ModuleNotFoundError: No module named 'alembic.migration',"Traceback (most recent call last):
+  File ""/workspace/app/db/migrate.py"", line 2, in <module>
+    from alembic.migration import MigrationContext
+ModuleNotFoundError: No module named 'alembic.migration'",Missing database migration toolchain
+import_dependency_error,ImportError: dynamic module does not define module export function (PyInit__rust),"Traceback (most recent call last):
+  File ""/workspace/app/core/crypto.py"", line 4, in <module>
+    import cryptography.hazmat.bindings._rust
+ImportError: dynamic module does not define module export function",Binary architecture mismatch in compiled C/Rust extension
+import_dependency_error,ModuleNotFoundError: No module named 'structlog',"Traceback (most recent call last):
+  File ""/workspace/app/core/logging.py"", line 4, in <module>
+    import structlog
+ModuleNotFoundError: No module named 'structlog'",Structured logging library absent from environment
+import_dependency_error,ImportError: cannot import name 'HTTP_200_OK' from 'starlette.status',"Traceback (most recent call last):
+  File ""/workspace/app/api/endpoints.py"", line 5, in <module>
+    from starlette.status import HTTP_200_OK
+ImportError: cannot import name 'HTTP_200_OK' from 'starlette.status'",Deprecated or shadowed starlette module
+import_dependency_error,ModuleNotFoundError: No module named 'pytest_asyncio',"Traceback (most recent call last):
+  File ""/workspace/tests/conftest.py"", line 3, in <module>
+    import pytest_asyncio
+ModuleNotFoundError: No module named 'pytest_asyncio'",Asynchronous test runner plugin missing
+import_dependency_error,ImportError: attempted relative import with no known parent package,"Traceback (most recent call last):
+  File ""/workspace/app/models/user.py"", line 2, in <module>
+    from ..core.base import Base
+ImportError: attempted relative import with no known parent package",Executing submodule directly as script breaking relative imports
+import_dependency_error,ModuleNotFoundError: No module named 'asyncpg.pgproto',"Traceback (most recent call last):
+  File ""/workspace/app/db/connection.py"", line 6, in <module>
+    import asyncpg.pgproto.types
+ModuleNotFoundError: No module named 'asyncpg.pgproto'",Corrupted or missing asyncpg binary wheels
+import_dependency_error,ImportError: version conflict: package 'tenacity>=9.0.0' required but 8.2.3 is installed,"Traceback (most recent call last):
+  File ""/workspace/app/services/retry.py"", line 1, in <module>
+    import tenacity
+ImportError: version conflict: package 'tenacity>=9.0.0' required but 8.2.3 is installed",Incompatible dependency version skew
+type_error,TypeError: unsupported operand type(s) for +: 'int' and 'str',"Traceback (most recent call last):
+  File ""/workspace/app/services/billing.py"", line 45, in calculate_total
+    total = price + tax_rate
+TypeError: unsupported operand type(s) for +: 'int' and 'str'",Concatenation or arithmetic across incompatible integer and string types
+type_error,TypeError: get_project() missing 1 required positional argument: 'db',"Traceback (most recent call last):
+  File ""/workspace/app/api/v1/projects.py"", line 32, in handle_request
+    return await get_project(project_id)
+TypeError: get_project() missing 1 required positional argument: 'db'",Missing required dependency injection parameter
+type_error,TypeError: 'int' object is not iterable,"Traceback (most recent call last):
+  File ""/workspace/app/utils/batch.py"", line 14, in process_all
+    for item in total_count:
+TypeError: 'int' object is not iterable",Attempting to iterate over numeric integer value
+type_error,TypeError: object of type 'NoneType' has no len(),"Traceback (most recent call last):
+  File ""/workspace/app/services/validator.py"", line 22, in validate_payload
+    if len(payload) == 0:
+TypeError: object of type 'NoneType' has no len()",Invoking len() on None
+type_error,TypeError: can only concatenate list (not 'tuple') to list,"Traceback (most recent call last):
+  File ""/workspace/app/routes/items.py"", line 58, in merge_results
+    combined = first_batch + second_batch
+TypeError: can only concatenate list (not 'tuple') to list",Combining list and tuple via + operator without conversion
+type_error,TypeError: 'str' object cannot be interpreted as an integer,"Traceback (most recent call last):
+  File ""/workspace/app/utils/pagination.py"", line 11, in get_page
+    return items[slice_start:page_size]
+TypeError: 'str' object cannot be interpreted as an integer",Passing string index slice into sequence
+type_error,TypeError: cannot unpack non-iterable int object,"Traceback (most recent call last):
+  File ""/workspace/app/agents/eval.py"", line 40, in evaluate
+    status, code = result
+TypeError: cannot unpack non-iterable int object",Destructuring assignment against single integer
+type_error,TypeError: issubclass() arg 1 must be a class,"Traceback (most recent call last):
+  File ""/workspace/app/core/factory.py"", line 19, in register_type
+    if issubclass(target, BaseService):
+TypeError: issubclass() arg 1 must be a class",Passing instance or primitive rather than type class
+type_error,TypeError: unhashable type: 'dict',"Traceback (most recent call last):
+  File ""/workspace/app/cache/memo.py"", line 15, in store_cache
+    seen_keys.add(filter_params)
+TypeError: unhashable type: 'dict'",Using mutable dict inside set or as dictionary key
+type_error,"TypeError: format() argument 1 must be string, not float","Traceback (most recent call last):
+  File ""/workspace/app/services/log.py"", line 51, in log_stat
+    output = template.format(score)
+TypeError: format() argument 1 must be string, not float",Type mismatch in format parameter expectation
+type_error,TypeError: 'Coroutine' object is not subscriptable,"Traceback (most recent call last):
+  File ""/workspace/app/handlers/async_task.py"", line 63, in dispatch
+    item = fetch_data()[""id""]
+TypeError: 'coroutine' object is not subscriptable",Forgot to await async coroutine before subscripting result
+type_error,"TypeError: json.dumps() argument must be a serializable type, got set","Traceback (most recent call last):
+  File ""/workspace/app/services/export.py"", line 29, in to_json
+    return json.dumps(data)
+TypeError: Object of type set is not JSON serializable",JSON serializer encountered unhandled python set object
+type_error,TypeError: unhashable type: 'list',"Traceback (most recent call last):
+  File ""/workspace/app/utils/dedup.py"", line 8, in unique_items
+    return list(set(items_with_lists))
+TypeError: unhashable type: 'list'",Attempting to create set from list containing nested lists
+type_error,"TypeError: isinstance() arg 2 must be a type, a tuple of types, or a union","Traceback (most recent call last):
+  File ""/workspace/app/guards/check.py"", line 14, in check_valid
+    if isinstance(val, [int, str]):
+TypeError: isinstance() arg 2 must be a type, a tuple of types, or a union",Passed a list instead of a tuple to isinstance()
+type_error,TypeError: not all arguments converted during string formatting,"Traceback (most recent call last):
+  File ""/workspace/app/legacy/printer.py"", line 33, in log_message
+    return ""User: %s"" % (name, user_id)
+TypeError: not all arguments converted during string formatting",Tuple length exceeds percent-formatting specifiers
+type_error,TypeError: 'float' object cannot be interpreted as an integer,"Traceback (most recent call last):
+  File ""/workspace/app/models/matrix.py"", line 47, in reshape
+    for idx in range(num_rows / 2):
+TypeError: 'float' object cannot be interpreted as an integer",Floating point division result passed into range() instead of integer division
+type_error,"TypeError: write() argument must be str, not bytes","Traceback (most recent call last):
+  File ""/workspace/app/io/writer.py"", line 21, in dump_text
+    with open(""out.txt"", ""w"") as f: f.write(payload_bytes)
+TypeError: write() argument must be str, not bytes",Writing raw byte stream to text-mode file handle
+type_error,"TypeError: An asyncio.Future, a coroutine or an awaitable is required but got int","Traceback (most recent call last):
+  File ""/workspace/app/async_tools/gather.py"", line 12, in run_all
+    await asyncio.gather(42, fetch_worker())
+TypeError: An asyncio.Future, a coroutine or an awaitable is required",Passing primitive number to asyncio.gather
+type_error,"TypeError: string indices must be integers, not 'str'","Traceback (most recent call last):
+  File ""/workspace/app/api/client.py"", line 38, in parse_response
+    token = response[""auth""][""token""]
+TypeError: string indices must be integers, not 'str'",String indexing using dictionary string key instead of deserializing JSON
+type_error,TypeError: slice indices must be integers or None or have an __index__ method,"Traceback (most recent call last):
+  File ""/workspace/app/data/slicer.py"", line 17, in slice_data
+    return data[start:end_val]
+TypeError: slice indices must be integers or None or have an __index__ method",Non-integer slice boundary index
+attribute_null_reference_error,AttributeError: 'NoneType' object has no attribute 'id',"Traceback (most recent call last):
+  File ""/workspace/app/services/project_service.py"", line 78, in get_details
+    return {""id"": project.id, ""name"": project.name}
+AttributeError: 'NoneType' object has no attribute 'id'",Query returned None and subsequent property access crashed
+attribute_null_reference_error,AttributeError: 'NoneType' object has no attribute 'strip',"Traceback (most recent call last):
+  File ""/workspace/app/utils/sanitizer.py"", line 19, in clean_input
+    return text.strip().lower()
+AttributeError: 'NoneType' object has no attribute 'strip'",Calling string strip method on None variable
+attribute_null_reference_error,AttributeError: 'NoneType' object has no attribute 'get',"Traceback (most recent call last):
+  File ""/workspace/app/api/middleware.py"", line 45, in authenticate
+    token = headers.get(""Authorization"")
+AttributeError: 'NoneType' object has no attribute 'get'",Optional request headers dictionary was None
+attribute_null_reference_error,AttributeError: 'Repository' object has no attribute 'primary_language',"Traceback (most recent call last):
+  File ""/workspace/app/services/repo.py"", line 61, in summarize
+    lang = repo.primary_language
+AttributeError: 'Repository' object has no attribute 'primary_language'",Misnamed ORM attribute or accessed unmapped column
+attribute_null_reference_error,AttributeError: 'NoneType' object has no attribute 'commit',"Traceback (most recent call last):
+  File ""/workspace/app/db/unit_of_work.py"", line 33, in save_changes
+    await self.session.commit()
+AttributeError: 'NoneType' object has no attribute 'commit'",Uninitialized database session dereference
+attribute_null_reference_error,AttributeError: 'dict' object has no attribute 'username',"Traceback (most recent call last):
+  File ""/workspace/app/auth/service.py"", line 52, in verify_user
+    print(user_data.username)
+AttributeError: 'dict' object has no attribute 'username'",Accessed dictionary key using dot notation attribute lookup
+attribute_null_reference_error,AttributeError: 'NoneType' object has no attribute 'startswith',"Traceback (most recent call last):
+  File ""/workspace/app/utils/path.py"", line 12, in is_absolute
+    return file_path.startswith(""/"")
+AttributeError: 'NoneType' object has no attribute 'startswith'",Passing None to path validation method
+attribute_null_reference_error,AttributeError: 'NoneType' object has no attribute 'read',"Traceback (most recent call last):
+  File ""/workspace/app/io/reader.py"", line 28, in read_file
+    content = handle.read()
+AttributeError: 'NoneType' object has no attribute 'read'",File descriptor handle opened as None
+attribute_null_reference_error,AttributeError: 'Task' object has no attribute 'execution_logs',"Traceback (most recent call last):
+  File ""/workspace/app/views/tasks.py"", line 104, in render
+    logs = task.execution_logs
+AttributeError: 'Task' object has no attribute 'execution_logs'",Non-existent relationship or deprecated attribute name
+attribute_null_reference_error,AttributeError: 'NoneType' object has no attribute 'items',"Traceback (most recent call last):
+  File ""/workspace/app/pipelines/parser.py"", line 71, in extract
+    for k, v in config_dict.items():
+AttributeError: 'NoneType' object has no attribute 'items'",Iterating over missing optional configuration object
+attribute_null_reference_error,AttributeError: 'NoneType' object has no attribute 'split',"Traceback (most recent call last):
+  File ""/workspace/app/search/query.py"", line 15, in tokenize
+    terms = raw_query.split()
+AttributeError: 'NoneType' object has no attribute 'split'",Missing query parameter defaulting to None instead of empty string
+attribute_null_reference_error,AttributeError: 'User' object has no attribute 'hashed_password',"Traceback (most recent call last):
+  File ""/workspace/app/auth/hasher.py"", line 22, in check
+    return bcrypt.verify(password, user.hashed_password)
+AttributeError: 'User' object has no attribute 'hashed_password'",Schema attribute mismatch on user authentication model
+attribute_null_reference_error,AttributeError: 'NoneType' object has no attribute 'scalars',"Traceback (most recent call last):
+  File ""/workspace/app/db/repositories.py"", line 40, in get_all
+    return result.scalars().all()
+AttributeError: 'NoneType' object has no attribute 'scalars'",Database query execute returned None on mocked session
+attribute_null_reference_error,AttributeError: 'NoneType' object has no attribute 'group',"Traceback (most recent call last):
+  File ""/workspace/app/ml/preprocessor.py"", line 92, in extract
+    return match.group(1)
+AttributeError: 'NoneType' object has no attribute 'group'",Regex pattern failed to match and returned None before group() access
+attribute_null_reference_error,AttributeError: 'NoneType' object has no attribute 'find',"Traceback (most recent call last):
+  File ""/workspace/app/scraper/parse.py"", line 55, in find_element
+    return soup.find(""div"", class_=""content"")
+AttributeError: 'NoneType' object has no attribute 'find'",Null document object dereference
+attribute_null_reference_error,AttributeError: module 'asyncio' has no attribute 'coroutine',"Traceback (most recent call last):
+  File ""/workspace/app/legacy/async.py"", line 8, in <module>
+    @asyncio.coroutine
+AttributeError: module 'asyncio' has no attribute 'coroutine'",Removed Python 3.11+ decorator attribute access
+attribute_null_reference_error,AttributeError: 'NoneType' object has no attribute 'send',"Traceback (most recent call last):
+  File ""/workspace/app/events/queue.py"", line 49, in emit
+    self.producer.send(topic, payload)
+AttributeError: 'NoneType' object has no attribute 'send'",Disconnected message broker client handle
+attribute_null_reference_error,AttributeError: 'NoneType' object has no attribute 'status_code',"Traceback (most recent call last):
+  File ""/workspace/app/http/client.py"", line 66, in verify_status
+    if resp.status_code == 200:
+AttributeError: 'NoneType' object has no attribute 'status_code'",HTTP client returned None on network error before status check
+attribute_null_reference_error,AttributeError: 'NoneType' object has no attribute 'lower',"Traceback (most recent call last):
+  File ""/workspace/app/filters/case.py"", line 12, in to_case
+    return value.lower()
+AttributeError: 'NoneType' object has no attribute 'lower'",Calling lower() on missing nullable database column value
+attribute_null_reference_error,AttributeError: 'NoneType' object has no attribute 'values',"Traceback (most recent call last):
+  File ""/workspace/app/stats/aggregator.py"", line 88, in sum_all
+    return sum(mapping.values())
+AttributeError: 'NoneType' object has no attribute 'values'",None passed to dictionary aggregator function
+index_key_error,IndexError: list index out of range,"Traceback (most recent call last):
+  File ""/workspace/app/parsers/csv.py"", line 41, in get_first_token
+    token = row[0]
+IndexError: list index out of range",Empty list indexed with zero or out-of-bounds offset
+index_key_error,KeyError: 'user_id',"Traceback (most recent call last):
+  File ""/workspace/app/auth/jwt.py"", line 29, in decode_token
+    return payload[""user_id""]
+KeyError: 'user_id'",Accessing missing required key from dictionary without .get()
+index_key_error,IndexError: pop from empty list,"Traceback (most recent call last):
+  File ""/workspace/app/structures/stack.py"", line 18, in pop
+    return self.elements.pop()
+IndexError: pop from empty list",Calling pop() on empty sequence list
+index_key_error,KeyError: 'api_key',"Traceback (most recent call last):
+  File ""/workspace/app/config.py"", line 55, in load_secrets
+    secret = os.environ[""GEMINI_API_KEY""]
+KeyError: 'GEMINI_API_KEY'",Missing required environment variable key in os.environ
+index_key_error,IndexError: tuple index out of range,"Traceback (most recent call last):
+  File ""/workspace/app/db/raw.py"", line 67, in fetch_coords
+    lat, lon, alt = row[0], row[1], row[2]
+IndexError: tuple index out of range",Tuple had only 2 elements when 3 were requested
+index_key_error,KeyError: 'status',"Traceback (most recent call last):
+  File ""/workspace/app/workflow/state.py"", line 83, in check_status
+    if task_dict[""status""] == ""COMPLETED"":
+KeyError: 'status'",Dictionary missing status field
+index_key_error,IndexError: deque index out of range,"Traceback (most recent call last):
+  File ""/workspace/app/queues/buffer.py"", line 32, in peek
+    return self.window[5]
+IndexError: deque index out of range",Out-of-range index into collections.deque
+index_key_error,KeyError: 'repository_id',"Traceback (most recent call last):
+  File ""/workspace/app/api/v1/tasks.py"", line 50, in create_task
+    repo_id = payload[""repository_id""]
+KeyError: 'repository_id'",Missing expected key in API body payload
+index_key_error,IndexError: string index out of range,"Traceback (most recent call last):
+  File ""/workspace/app/utils/initials.py"", line 8, in get_initial
+    return name[0]
+IndexError: string index out of range",Indexing empty string at position 0
+index_key_error,KeyError: 'default',"Traceback (most recent call last):
+  File ""/workspace/app/models/registry.py"", line 42, in get_model
+    return registry[""default""]
+KeyError: 'default'",Default profile not registered in lookup dict
+index_key_error,IndexError: list assignment index out of range,"Traceback (most recent call last):
+  File ""/workspace/app/matrices/grid.py"", line 19, in set_cell
+    grid[row_idx][col_idx] = val
+IndexError: list assignment index out of range",Mutating element at non-existent list index
+index_key_error,KeyError: 404,"Traceback (most recent call last):
+  File ""/workspace/app/http/dispatcher.py"", line 77, in dispatch_error
+    handler = handlers[response.status_code]
+KeyError: 404",Unregistered HTTP status code in error handler map
+index_key_error,KeyError: 'Authorization',"Traceback (most recent call last):
+  File ""/workspace/app/auth/middleware.py"", line 18, in parse_header
+    token = request.headers[""Authorization""]
+KeyError: 'Authorization'",Missing header key without exception handling
+index_key_error,IndexError: single positional indexer is out-of-bounds,"Traceback (most recent call last):
+  File ""/workspace/app/analytics/table.py"", line 44, in get_row
+    return df.iloc[100]
+IndexError: single positional indexer is out-of-bounds",Pandas DataFrame row index out of bounds
+index_key_error,KeyError: 'Content-Type',"Traceback (most recent call last):
+  File ""/workspace/app/services/http.py"", line 59, in get_media_type
+    return resp.headers[""Content-Type""]
+KeyError: 'Content-Type'",Missing Content-Type header in response dictionary
+index_key_error,IndexError: index 10 is out of bounds for axis 0 with size 5,"Traceback (most recent call last):
+  File ""/workspace/app/ml/vectors.py"", line 26, in get_vector
+    return array[10]
+IndexError: index 10 is out of bounds for axis 0 with size 5",NumPy 1D array slice index exceeded array dimension
+index_key_error,KeyError: 'embedding',"Traceback (most recent call last):
+  File ""/workspace/app/agents/memory.py"", line 37, in parse_memory
+    vec = memory_dict[""embedding""]
+KeyError: 'embedding'",Missing embedding vector attribute in JSON payload
+index_key_error,KeyError: 'file_path',"Traceback (most recent call last):
+  File ""/workspace/app/services/diff.py"", line 15, in parse_diff
+    path = change[""file_path""]
+KeyError: 'file_path'",Missing file_path field in change event
+index_key_error,IndexError: list index -1 out of range,"Traceback (most recent call last):
+  File ""/workspace/app/utils/stack.py"", line 11, in last_item
+    return items[-1]
+IndexError: list index -1 out of range",Indexing -1 on empty collection
+index_key_error,KeyError: 'refresh_token',"Traceback (most recent call last):
+  File ""/workspace/app/auth/tokens.py"", line 82, in refresh_session
+    token = cookie_jar[""refresh_token""]
+KeyError: 'refresh_token'",Missing refresh token cookie entry
+runtime_logic_error,ZeroDivisionError: division by zero,"Traceback (most recent call last):
+  File ""/workspace/app/analytics/metrics.py"", line 63, in compute_rate
+    return success_count / total_runs
+ZeroDivisionError: division by zero",Denominator variable total_runs evaluated to zero
+runtime_logic_error,RecursionError: maximum recursion depth exceeded while calling a Python object,"Traceback (most recent call last):
+  File ""/workspace/app/structures/tree.py"", line 92, in traverse
+    return self.traverse(node.child)
+RecursionError: maximum recursion depth exceeded while calling a Python object",Infinite cyclic recursion without base termination condition
+runtime_logic_error,AssertionError: Expected 200 OK but got 500 Internal Server Error,"Traceback (most recent call last):
+  File ""/workspace/tests/test_api.py"", line 48, in test_login
+    assert response.status_code == 200, f""Expected 200 OK but got {response.status_code}""
+AssertionError: Expected 200 OK but got 500 Internal Server Error",Unit test assertion failed due to unexpected response code
+runtime_logic_error,ValueError: invalid literal for int() with base 10: 'abc',"Traceback (most recent call last):
+  File ""/workspace/app/parsers/int_parser.py"", line 12, in to_int
+    return int(raw_string)
+ValueError: invalid literal for int() with base 10: 'abc'",Attempting to cast non-numeric alphanumeric string to integer
+runtime_logic_error,ZeroDivisionError: float division by zero,"Traceback (most recent call last):
+  File ""/workspace/app/finance/margin.py"", line 33, in profit_margin
+    return (revenue - cost) / revenue
+ZeroDivisionError: float division by zero",Revenue zero condition unhandled in financial formula
+runtime_logic_error,AssertionError: assert False where False = is_verified(task),"Traceback (most recent call last):
+  File ""/workspace/tests/unit/test_task.py"", line 89, in test_workflow
+    assert is_verified(task)
+AssertionError: assert False where False = is_verified(task)",Logical assertion check failed in business validation
+runtime_logic_error,ValueError: math domain error,"Traceback (most recent call last):
+  File ""/workspace/app/math/calc.py"", line 15, in compute_log
+    return math.log(negative_val)
+ValueError: math domain error",Logarithm computed on non-positive input parameter
+runtime_logic_error,RuntimeError: Set changed size during iteration,"Traceback (most recent call last):
+  File ""/workspace/app/services/session_cleaner.py"", line 41, in purge
+    for session in active_sessions:
+RuntimeError: Set changed size during iteration",Mutating collection while actively iterating over it
+runtime_logic_error,"ValueError: not enough values to unpack (expected 3, got 2)","Traceback (most recent call last):
+  File ""/workspace/app/parsers/csv.py"", line 25, in parse_line
+    a, b, c = line.split("","")
+ValueError: not enough values to unpack (expected 3, got 2)",Split produced fewer tokens than destructuring variables
+runtime_logic_error,RecursionError: maximum recursion depth exceeded in comparison,"Traceback (most recent call last):
+  File ""/workspace/app/models/node.py"", line 18, in __eq__
+    return self.parent == other.parent
+RecursionError: maximum recursion depth exceeded in comparison",Infinite recursion in __eq__ method comparing cyclic graph nodes
+runtime_logic_error,AssertionError: expected array length 10 but got 0,"Traceback (most recent call last):
+  File ""/workspace/tests/test_search.py"", line 102, in test_results
+    assert len(results) == 10, f""expected array length 10 but got {len(results)}""
+AssertionError: expected array length 10 but got 0",Empty results returned when test expected 10 items
+runtime_logic_error,RuntimeError: Event loop is closed,"Traceback (most recent call last):
+  File ""/workspace/app/async_tools/loop.py"", line 33, in execute
+    asyncio.run(cleanup())
+RuntimeError: Event loop is closed",Attempted async task invocation on terminated event loop
+runtime_logic_error,ValueError: too many values to unpack (expected 2),"Traceback (most recent call last):
+  File ""/workspace/app/utils/split.py"", line 19, in split_kv
+    k, v = item.split(""="")
+ValueError: too many values to unpack (expected 2)",String contained multiple delimiter occurrences
+runtime_logic_error,ZeroDivisionError: integer division or modulo by zero,"Traceback (most recent call last):
+  File ""/workspace/app/math/hash.py"", line 7, in get_bucket
+    return key % num_buckets
+ZeroDivisionError: integer division or modulo by zero",Modulo hash operation with zero bucket count
+runtime_logic_error,AssertionError: diff check failed: applied patch did not match target file,"Traceback (most recent call last):
+  File ""/workspace/app/services/patcher.py"", line 88, in apply
+    assert content == expected, ""diff check failed: applied patch did not match target file""
+AssertionError: diff check failed: applied patch did not match target file",Patch application checksum validation mismatch
+runtime_logic_error,RuntimeError: maximum iteration limit 1000 reached without convergence,"Traceback (most recent call last):
+  File ""/workspace/app/algorithms/solver.py"", line 62, in solve
+    raise RuntimeError(""maximum iteration limit 1000 reached without convergence"")
+RuntimeError: maximum iteration limit 1000 reached without convergence",Numerical solver failed to converge within bounded iterations
+runtime_logic_error,ValueError: Unknown task type: 'invalid_type',"Traceback (most recent call last):
+  File ""/workspace/app/agents/orchestrator.py"", line 95, in route
+    raise ValueError(f""Unknown task type: {task_type}"")
+ValueError: Unknown task type: 'invalid_type'",Enum validation check encountered unsupported string input
+runtime_logic_error,AssertionError: Test failed: expected exit code 0 but got 1,"Traceback (most recent call last):
+  File ""/workspace/tests/integration/test_runner.py"", line 37, in test_exec
+    assert exit_code == 0
+AssertionError: assert 1 == 0",Process execution exited with non-zero status code
+runtime_logic_error,ValueError: unconverted data remains: ' 12:00:00',"Traceback (most recent call last):
+  File ""/workspace/app/utils/date.py"", line 14, in parse_iso
+    return datetime.strptime(val, ""%Y-%m-%d"")
+ValueError: unconverted data remains: ' 12:00:00'",Date format string missing time component specifiers
+runtime_logic_error,OverflowError: int too large to convert to float,"Traceback (most recent call last):
+  File ""/workspace/app/math/huge.py"", line 29, in to_float
+    return float(2 ** 2048)
+OverflowError: int too large to convert to float",Arithmetic exponent overflow beyond double precision limit
+database_network_error,asyncpg.exceptions.CannotConnectNowError: connection to server on socket failed: Connection refused,"Traceback (most recent call last):
+  File ""/workspace/app/db/session.py"", line 55, in get_session
+    conn = await asyncpg.connect(""postgresql://postgres:secret@localhost:5432/devora"")
+asyncpg.exceptions.CannotConnectNowError: connection to server on socket ""/tmp/.s.PGSQL.5432"" failed: Connection refused",PostgreSQL service daemon is not running or listening on target port
+database_network_error,sqlalchemy.exc.IntegrityError: (sqlalchemy.dialects.postgresql.asyncpg.IntegrityError) duplicate key value violates unique constraint 'uq_users_email',"Traceback (most recent call last):
+  File ""/workspace/app/services/user_service.py"", line 42, in register
+    await db.commit()
+sqlalchemy.exc.IntegrityError: (sqlalchemy.dialects.postgresql.asyncpg.IntegrityError) duplicate key value violates unique constraint 'uq_users_email'
+DETAIL: Key (email)=(test@example.com) already exists.",Unique database column constraint violation on user registration
+database_network_error,httpx.ConnectError: [Errno 61] Connection refused,"Traceback (most recent call last):
+  File ""/workspace/app/services/github.py"", line 73, in fetch_repo
+    resp = await client.get(""https://api.github.com/repos/org/repo"")
+httpx.ConnectError: [Errno 61] Connection refused",Outbound HTTP request failed due to offline host or firewall block
+database_network_error,sqlalchemy.exc.OperationalError: (asyncpg.exceptions.DeadlockDetectedError) deadlock detected,"Traceback (most recent call last):
+  File ""/workspace/app/db/transaction.py"", line 112, in execute_transfer
+    await db.execute(update_stmt)
+sqlalchemy.exc.OperationalError: (asyncpg.exceptions.DeadlockDetectedError) deadlock detected
+DETAIL: Process 1849 waits for ExclusiveLock on relation; blocked by process 1850.",Concurrent conflicting transactions blocked in database deadlock
+database_network_error,httpx.ReadTimeout: The read operation timed out,"Traceback (most recent call last):
+  File ""/workspace/app/agents/gateway.py"", line 88, in call_api
+    response = await client.post(""https://generativelanguage.googleapis.com"", timeout=30.0)
+httpx.ReadTimeout: The read operation timed out",Upstream LLM API server did not return response within timeout window
+database_network_error,sqlalchemy.exc.ProgrammingError: (asyncpg.exceptions.UndefinedTableError) relation 'repository_memories' does not exist,"Traceback (most recent call last):
+  File ""/workspace/app/services/memory_service.py"", line 67, in search_memories
+    res = await db.execute(stmt)
+sqlalchemy.exc.ProgrammingError: (asyncpg.exceptions.UndefinedTableError) relation 'repository_memories' does not exist",Alembic migration has not been applied to database instance
+database_network_error,"asyncpg.exceptions.TooManyConnectionsError: sorry, too many clients already","Traceback (most recent call last):
+  File ""/workspace/app/db/pool.py"", line 39, in acquire
+    conn = await pool.acquire()
+asyncpg.exceptions.TooManyConnectionsError: sorry, too many clients already",PostgreSQL connection pool exhausted by unreleased client connections
+database_network_error,"socket.gaierror: [Errno 8] nodename nor servname provided, or not known","Traceback (most recent call last):
+  File ""/workspace/app/clients/dns.py"", line 14, in resolve
+    addr = socket.gethostbyname(""api.nonexistent-service.internal"")
+socket.gaierror: [Errno 8] nodename nor servname provided, or not known",DNS hostname resolution failure for backend internal service
+database_network_error,sqlalchemy.exc.DataError: (asyncpg.exceptions.DataError) different vector dimensions 768 and 1536,"Traceback (most recent call last):
+  File ""/workspace/app/services/vector.py"", line 45, in insert_vector
+    await db.execute(insert_stmt)
+sqlalchemy.exc.DataError: (asyncpg.exceptions.DataError) different vector dimensions 768 and 1536",Pgvector dimension mismatch between model embedding and table column definition
+database_network_error,httpx.ConnectTimeout: timed out while connecting to host,"Traceback (most recent call last):
+  File ""/workspace/app/webhook/notifier.py"", line 22, in notify
+    await client.post(""https://hooks.slack.com/services/xxx"", timeout=5.0)
+httpx.ConnectTimeout: timed out while connecting to host",Network connection handshake timed out
+database_network_error,sqlalchemy.exc.IntegrityError: insert or update on table 'tasks' violates foreign key constraint 'fk_tasks_repository_id',"Traceback (most recent call last):
+  File ""/workspace/app/services/task_service.py"", line 58, in create_task
+    await db.commit()
+sqlalchemy.exc.IntegrityError: insert or update on table 'tasks' violates foreign key constraint 'fk_tasks_repository_id'
+DETAIL: Key (repository_id)=(99999) is not present in table 'repositories'.",Referenced repository row does not exist in parent table
+database_network_error,asyncpg.exceptions.InvalidPasswordError: password authentication failed for user 'devora',"Traceback (most recent call last):
+  File ""/workspace/app/db/auth.py"", line 19, in connect
+    conn = await asyncpg.connect(user=""devora"", password=""bad"")
+asyncpg.exceptions.InvalidPasswordError: password authentication failed for user 'devora'",Incorrect database credential provided in connection string
+database_network_error,httpx.RemoteProtocolError: Server disconnected without sending a response,"Traceback (most recent call last):
+  File ""/workspace/app/api/stream.py"", line 33, in stream_response
+    async for chunk in resp.aiter_bytes():
+httpx.RemoteProtocolError: Server disconnected without sending a response",Upstream server terminated TCP connection mid-stream
+database_network_error,sqlalchemy.exc.DBAPIError: connection closed abruptly by server,"Traceback (most recent call last):
+  File ""/workspace/app/db/query.py"", line 82, in run_query
+    await db.execute(select(User))
+sqlalchemy.exc.DBAPIError: connection closed abruptly by server",Database server restart or severed connection during query execution
+database_network_error,redis.exceptions.ConnectionError: Error 61 connecting to localhost:6379. Connection refused.,"Traceback (most recent call last):
+  File ""/workspace/app/cache/redis.py"", line 24, in ping
+    await r.ping()
+redis.exceptions.ConnectionError: Error 61 connecting to localhost:6379. Connection refused.",Redis cache server is offline or unreachable
+database_network_error,"sqlalchemy.exc.InternalError: current transaction is aborted, commands ignored until end of transaction block","Traceback (most recent call last):
+  File ""/workspace/app/db/flow.py"", line 91, in next_step
+    await db.execute(stmt)
+sqlalchemy.exc.InternalError: current transaction is aborted, commands ignored until end of transaction block",Query executed on dirty aborted transaction before rollback
+database_network_error,asyncpg.exceptions.QueryCanceledError: canceling statement due to statement timeout,"Traceback (most recent call last):
+  File ""/workspace/app/reports/analytics.py"", line 120, in run_heavy_report
+    res = await db.execute(long_query)
+asyncpg.exceptions.QueryCanceledError: canceling statement due to statement timeout",Long-running analytical query killed by PostgreSQL statement timeout
+database_network_error,httpx.HTTPStatusError: Server error '502 Bad Gateway' for url 'https://gateway.internal/v1/inference',"Traceback (most recent call last):
+  File ""/workspace/app/services/proxy.py"", line 47, in call_proxy
+    resp.raise_for_status()
+httpx.HTTPStatusError: Server error '502 Bad Gateway' for url 'https://gateway.internal/v1/inference'",Reverse proxy failed to receive valid response from upstream container
+database_network_error,sqlalchemy.exc.OperationalError: server closed the connection unexpectedly,"Traceback (most recent call last):
+  File ""/workspace/app/db/alive.py"", line 14, in check_health
+    await db.execute(text(""SELECT 1""))
+sqlalchemy.exc.OperationalError: server closed the connection unexpectedly",PostgreSQL engine killed or severed client socket
+database_network_error,"urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.github.com', port=443): Max retries exceeded with url: /user","Traceback (most recent call last):
+  File ""/workspace/app/auth/github.py"", line 38, in verify_token
+    res = requests.get(""https://api.github.com/user"")
+urllib3.exceptions.MaxRetryError: HTTPSConnectionPool(host='api.github.com', port=443): Max retries exceeded with url: /user",Exceeded maximum retry attempts connecting to remote GitHub API
+permission_security_error,PermissionError: [Errno 13] Permission denied: '/var/log/devora/app.log',"Traceback (most recent call last):
+  File ""/workspace/app/core/logging.py"", line 45, in configure_file_handler
+    with open(""/var/log/devora/app.log"", ""a"") as f:
+PermissionError: [Errno 13] Permission denied: '/var/log/devora/app.log'",Non-root process lacks write permission to root-owned directory
+permission_security_error,jwt.exceptions.ExpiredSignatureError: Signature has expired,"Traceback (most recent call last):
+  File ""/workspace/app/auth/tokens.py"", line 55, in verify_jwt
+    payload = jwt.decode(token, secret, algorithms=[""HS256""])
+jwt.exceptions.ExpiredSignatureError: Signature has expired",Bearer JWT token expiration timestamp is in the past
+permission_security_error,fastapi.HTTPException: 403: Forbidden - user does not have write access to this repository,"Traceback (most recent call last):
+  File ""/workspace/app/api/v1/projects.py"", line 98, in update_repo
+    raise HTTPException(status_code=403, detail=""Forbidden - user does not have write access to this repository"")
+fastapi.HTTPException: 403: Forbidden - user does not have write access to this repository",User role lacks required RBAC permission for mutating repository
+permission_security_error,jwt.exceptions.InvalidSignatureError: Signature verification failed,"Traceback (most recent call last):
+  File ""/workspace/app/auth/tokens.py"", line 61, in verify_jwt
+    payload = jwt.decode(token, secret, algorithms=[""HS256""])
+jwt.exceptions.InvalidSignatureError: Signature verification failed",Tampered token or mismatched cryptographic secret key
+permission_security_error,fastapi.HTTPException: 401: Unauthorized - invalid or missing credentials,"Traceback (most recent call last):
+  File ""/workspace/app/core/auth_middleware.py"", line 33, in check_auth
+    raise HTTPException(status_code=401, detail=""Unauthorized - invalid or missing credentials"")
+fastapi.HTTPException: 401: Unauthorized - invalid or missing credentials",Missing Authorization Bearer token header in API request
+permission_security_error,PermissionError: [Errno 1] Operation not permitted,"Traceback (most recent call last):
+  File ""/workspace/app/sandbox/runner.py"", line 87, in isolate_namespace
+    os.chroot(""/isolated/jail"")
+PermissionError: [Errno 1] Operation not permitted",Sandboxed process attempted privileged chroot operation
+permission_security_error,jwt.exceptions.DecodeError: Not enough segments,"Traceback (most recent call last):
+  File ""/workspace/app/auth/tokens.py"", line 49, in decode_token
+    payload = jwt.decode(token_str, ""secret"", algorithms=[""HS256""])
+jwt.exceptions.DecodeError: Not enough segments","Malformed JWT missing header, payload, or signature segments"
+permission_security_error,PermissionError: Read-only file system: '/app/secrets/master.key',"Traceback (most recent call last):
+  File ""/workspace/app/crypto/keys.py"", line 22, in rotate_key
+    with open(""/app/secrets/master.key"", ""w"") as f: f.write(new_key)
+PermissionError: Read-only file system: '/app/secrets/master.key'",Attempting write modification to read-only mounted container volume
+permission_security_error,SecurityException: Attempted directory traversal attack via '../etc/passwd',"Traceback (most recent call last):
+  File ""/workspace/app/services/sandbox.py"", line 40, in safe_path
+    raise SecurityException(""Attempted directory traversal attack via '../etc/passwd'"")
+SecurityException: Attempted directory traversal attack via '../etc/passwd'",Path sanitizer caught attempted escape outside workspace sandbox root
+permission_security_error,fastapi.HTTPException: 403: Tenant mismatch - resource belongs to another organization,"Traceback (most recent call last):
+  File ""/workspace/app/api/guards.py"", line 51, in verify_tenant
+    raise HTTPException(status_code=403, detail=""Tenant mismatch - resource belongs to another organization"")
+fastapi.HTTPException: 403: Tenant mismatch - resource belongs to another organization",Cross-tenant resource access blocked by authorization guard
+permission_security_error,PermissionError: [Errno 13] Permission denied to bind to port 80,"Traceback (most recent call last):
+  File ""/workspace/app/server.py"", line 18, in run
+    sock.bind((""0.0.0.0"", 80))
+PermissionError: [Errno 13] Permission denied",Binding privileged port (< 1024) without root privileges
+permission_security_error,jwt.exceptions.InvalidTokenError: Invalid token algorithm,"Traceback (most recent call last):
+  File ""/workspace/app/auth/verifier.py"", line 37, in verify
+    jwt.decode(token, key, algorithms=[""RS256""])
+jwt.exceptions.InvalidTokenError: The specified alg value is not allowed",Mismatched signature algorithm or 'none' algorithm bypass attempt
+permission_security_error,PermissionError: access denied by security sandbox policy,"Traceback (most recent call last):
+  File ""/workspace/app/sandbox/policy.py"", line 72, in execute_command
+    raise PermissionError(""access denied by security sandbox policy"")
+PermissionError: access denied by security sandbox policy",Command execution prohibited by Devora sandbox security whitelist
+permission_security_error,fastapi.HTTPException: 401: Invalid session or session revoked,"Traceback (most recent call last):
+  File ""/workspace/app/api/v1/auth.py"", line 110, in me
+    raise HTTPException(status_code=401, detail=""Invalid session or session revoked"")
+fastapi.HTTPException: 401: Invalid session or session revoked",User session token invalidated or revoked in backend store
+permission_security_error,PermissionError: write access to protected branch 'main' requires pull request approval,"Traceback (most recent call last):
+  File ""/workspace/app/git/push.py"", line 44, in push_branch
+    raise PermissionError(""write access to protected branch 'main' requires pull request approval"")
+PermissionError: write access to protected branch 'main' requires pull request approval",Branch protection rule prevented direct branch push
+permission_security_error,SecurityException: API token contains unauthorized scopes for target resource,"Traceback (most recent call last):
+  File ""/workspace/app/auth/scopes.py"", line 29, in enforce
+    raise SecurityException(""API token contains unauthorized scopes for target resource"")
+SecurityException: API token contains unauthorized scopes for target resource",OAuth token lacks repo:admin scope
+permission_security_error,PermissionError: [Errno 13] cannot execute binary file: Permission denied,"Traceback (most recent call last):
+  File ""/workspace/app/sandbox/exec.py"", line 50, in run_binary
+    subprocess.run([""/bin/custom_tool""])
+PermissionError: [Errno 13] Permission denied",Target binary lacks executable bit permissions (+x)
+permission_security_error,fastapi.HTTPException: 403: Forbidden - IP address not in allowlist,"Traceback (most recent call last):
+  File ""/workspace/app/security/ip_filter.py"", line 25, in filter_ip
+    raise HTTPException(status_code=403, detail=""Forbidden - IP address not in allowlist"")
+fastapi.HTTPException: 403: Forbidden - IP address not in allowlist",Client IP rejected by network security firewall
+permission_security_error,jwt.exceptions.InvalidAudienceError: Invalid audience,"Traceback (most recent call last):
+  File ""/workspace/app/auth/oauth.py"", line 63, in check_aud
+    jwt.decode(token, secret, audience=""https://devora.ai"")
+jwt.exceptions.InvalidAudienceError: Invalid audience",JWT aud claim mismatch against target audience identifier
+permission_security_error,PermissionError: cannot open socket on restricted loopback interface,"Traceback (most recent call last):
+  File ""/workspace/app/net/socket.py"", line 33, in open_raw
+    s = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+PermissionError: [Errno 1] Operation not permitted",Creating raw network socket requires elevated root capability
+runtime_logic_error,Fix ZeroDivisionError in calculate_ratio,ZeroDivisionError: float division by zero in calculate_ratio,"Task 310d6110-2aa0-4f67-bd3c-29e8d21ae906: When denominator is zero, function should return 0.0 instead of crashing."

@@ -32,6 +32,9 @@ export interface Repository {
   clone_url: string;
   default_branch: string;
   language: string | null;
+  installation_id?: number | null;
+  is_private?: boolean;
+  permissions?: Record<string, any>;
   current_commit_sha?: string | null;
   indexing_status?: "NOT_INDEXED" | "INDEXING" | "INDEXED" | "FAILED" | string;
   last_indexed_at?: string | null;
@@ -100,6 +103,53 @@ export interface CodeSearchResultItem {
   score: number;
 }
 
+export interface RepositoryMemory {
+  id: string;
+  repository_id: string;
+  category: string;
+  title?: string | null;
+  content: string;
+  source_reference?: string | null;
+  commit_sha?: string | null;
+  verification_status: "observed_fact" | "ai_hypothesis" | "developer_confirmed" | "verified_outcome" | string;
+  access_scope: string;
+  is_stale: boolean;
+  stale_reason?: string | null;
+  helpful_count: number;
+  unhelpful_count: number;
+  metadata?: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MemorySearchResult {
+  id: string;
+  repository_id: string;
+  category: string;
+  title?: string | null;
+  content: string;
+  source_reference?: string | null;
+  commit_sha?: string | null;
+  verification_status: string;
+  is_stale: boolean;
+  stale_reason?: string | null;
+  helpful_count: number;
+  unhelpful_count: number;
+  raw_similarity: number;
+  score: number;
+  created_at?: string | null;
+  metadata?: Record<string, any>;
+}
+
+export interface MemoryStats {
+  repository_id: string;
+  total_memories: number;
+  verified_count: number;
+  stale_count: number;
+  categories: Record<string, number>;
+  verification_statuses: Record<string, number>;
+}
+
 export interface CodeSearchResponse {
   repository_id: string;
   query: string;
@@ -147,7 +197,15 @@ export interface Task {
   status: TaskStatus;
   iterations_count: number;
   target_branch: string;
+  task_branch?: string | null;
+  commit_sha?: string | null;
   pull_request_url: string | null;
+  recovery_status?: string;
+  recovery_attempts?: number;
+  last_heartbeat_at?: string | null;
+  recovery_lease_owner?: string | null;
+  recovery_lease_expires_at?: string | null;
+  recovery_error?: string | null;
   created_at: string;
   updated_at: string;
   plans?: TaskPlan[];
@@ -196,10 +254,76 @@ export interface TestRun {
   total_tests: number;
   passed_tests: number;
   failed_tests: number;
+  skipped_tests?: number;
   stdout?: string | null;
   stderr?: string | null;
   duration_seconds: number;
   created_at: string;
+  detected_languages?: string[];
+  detected_frameworks?: string[];
+  package_manager?: string | null;
+  discovery_status?: string;
+  execution_status?: string;
+  selected_test_files?: string[];
+  is_targeted?: boolean;
+  failure_classification?: string | null;
+  diagnostic_warning?: string | null;
+  stability_classification?: string | null;
+  stability_score?: number | null;
+  is_flaky?: boolean;
+  flaky_repeat_runs?: Array<{
+    run_index: number;
+    exit_code: number;
+    passed: boolean;
+    duration_seconds: number;
+    is_infra_error?: boolean;
+    is_timeout?: boolean;
+    error_preview?: string | null;
+  }>;
+  peak_memory_rss_bytes?: number | null;
+  peak_memory_rss_mb?: number | null;
+  cpu_time_seconds?: number | null;
+  wall_time_seconds?: number | null;
+  memory_limit_bytes?: number | null;
+  memory_limit_mb?: number | null;
+  cpu_limit?: number | null;
+  oom_killed?: boolean;
+  termination_reason?: string | null;
+  exit_classification?: string;
+  resource_telemetry_available?: boolean;
+}
+
+export interface FlakyTestRecord {
+  id: string;
+  repository_id: string;
+  task_id: string;
+  test_identifier: string;
+  test_file: string;
+  framework: string;
+  language: string;
+  test_command: string;
+  classification: "STABLE_PASS" | "CONSISTENT_FAILURE" | "FLAKY" | "INCONCLUSIVE" | "UNVERIFIED" | string;
+  stability_score: number;
+  total_runs: number;
+  passed_runs: number;
+  failed_runs: number;
+  infrastructure_error_runs: number;
+  timeout_runs: number;
+  execution_history: Record<string, any>;
+  first_detected_at: string;
+  last_detected_at: string;
+  last_verified_at: string;
+  created_at: string;
+}
+
+export interface RepositoryStabilitySummary {
+  repository_id: string;
+  total_tests_tracked: number;
+  flaky_tests_count: number;
+  stable_pass_count: number;
+  consistent_failure_count: number;
+  average_stability_score: number;
+  total_repeat_runs_executed: number;
 }
 
 export interface Approval {
@@ -231,3 +355,159 @@ export interface ApiError {
     timestamp: string;
   };
 }
+
+export interface GitHubStatus {
+  app_configured: boolean;
+  app_id?: string | null;
+  has_private_key: boolean;
+  is_mock: boolean;
+}
+
+export interface GitHubInstallation {
+  id: string;
+  user_id: string;
+  installation_id: number;
+  account_login: string;
+  account_type: string;
+  repository_selection: string;
+  permissions: Record<string, any>;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GitHubRepositoryItem {
+  id: number;
+  name: string;
+  full_name: string;
+  private: boolean;
+  clone_url: string;
+  default_branch: string;
+  language?: string | null;
+  permissions: Record<string, boolean>;
+}
+
+export interface GitBranch {
+  id?: string;
+  name: string;
+  commit_sha?: string | null;
+  base_branch?: string;
+  is_default: boolean;
+  is_task_branch: boolean;
+  is_pushed: boolean;
+  task_id?: string | null;
+  created_at?: string;
+}
+
+export interface PullRequest {
+  id: string;
+  task_id: string;
+  repository_id: string;
+  pr_number: number;
+  title: string;
+  body: string;
+  html_url: string;
+  head_branch: string;
+  base_branch: string;
+  state: "open" | "closed" | "merged" | string;
+  is_merged: boolean;
+  merge_commit_sha?: string | null;
+  merged_at?: string | null;
+  closed_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CheckpointSummary {
+  checkpoint_id: string;
+  node_name?: string | null;
+  step_number: number;
+  thread_id: string;
+  created_at?: string | null;
+}
+
+export interface TaskRecoveryStatusResponse {
+  task_id: string;
+  status: string;
+  recovery_status: string;
+  is_interrupted: boolean;
+  interruption_reason?: string | null;
+  is_eligible_for_recovery: boolean;
+  eligibility_reason: string;
+  recovery_attempts: number;
+  max_recovery_attempts: number;
+  last_heartbeat_at?: string | null;
+  recovery_lease_owner?: string | null;
+  recovery_lease_expires_at?: string | null;
+  recovery_error?: string | null;
+  latest_checkpoint?: CheckpointSummary | null;
+}
+
+export interface TaskResumeResponse {
+  task_id: string;
+  status: string;
+  recovery_status: string;
+  resumed_from_node: string;
+  step_number: number;
+  recovery_attempts: number;
+  message: string;
+}
+
+export interface InterruptedTaskItem {
+  task_id: string;
+  title: string;
+  status: string;
+  recovery_status: string;
+  interruption_reason: string;
+  eligible: boolean;
+  recovery_attempts: number;
+  last_heartbeat_at?: string | null;
+  latest_node?: string | null;
+}
+
+export interface InterruptedTaskScanResponse {
+  scanned_tasks_count: number;
+  interrupted_tasks: InterruptedTaskItem[];
+}
+
+export interface ModelCircuitBreakerStatus {
+  key: string;
+  provider_name: string;
+  model_name: string;
+  state: "CLOSED" | "OPEN" | "HALF_OPEN" | string;
+  consecutive_failures: number;
+  consecutive_successes: number;
+  recent_failures_in_window: number;
+  failure_threshold: number;
+  open_duration_seconds: number;
+  time_until_probe_seconds?: number | null;
+  last_failure_reason?: string | null;
+  last_failure_classification?: string | null;
+  last_failure_at?: string | null;
+  last_success_at?: string | null;
+  total_calls: number;
+  total_failures: number;
+  total_probes: number;
+}
+
+export interface ModelGatewayMetrics {
+  total_requests: number;
+  total_prompt_tokens: number;
+  total_completion_tokens: number;
+  total_retries: number;
+  total_fallbacks: number;
+  last_active_at?: string | null;
+}
+
+export interface ModelGatewayHealthResponse {
+  status: "HEALTHY" | "DEGRADED" | "UNAVAILABLE" | string;
+  circuit_breaker_enabled: boolean;
+  active_primary_provider: string;
+  active_primary_model: string;
+  fallback_enabled: boolean;
+  fallback_models: string[];
+  breakers: ModelCircuitBreakerStatus[];
+  metrics: ModelGatewayMetrics;
+  timestamp: string;
+}
+

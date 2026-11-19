@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from app.models.project import Project
     from app.models.repository import Repository
     from app.models.task import Task
+    from app.models.github_installation import GitHubInstallation
 
 
 class User(Base, UUIDMixin, TimestampMixin):
@@ -24,3 +25,4 @@ class User(Base, UUIDMixin, TimestampMixin):
     projects: Mapped[List["Project"]] = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
     repositories: Mapped[List["Repository"]] = relationship("Repository", back_populates="user", cascade="all, delete-orphan")
     tasks: Mapped[List["Task"]] = relationship("Task", back_populates="creator", cascade="all, delete-orphan")
+    github_installations: Mapped[List["GitHubInstallation"]] = relationship("GitHubInstallation", back_populates="user", cascade="all, delete-orphan")

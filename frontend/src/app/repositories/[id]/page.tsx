@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   GitBranch,
+  GitPullRequest,
   ArrowLeft,
   Plus,
   RefreshCw,
@@ -26,6 +27,7 @@ import {
   Sparkles,
   ChevronRight,
   BookOpen,
+  CheckCircle2,
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
@@ -33,10 +35,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { repositoryService } from "@/services/repository-service";
+import { githubService } from "@/services/github-service";
 import { taskService } from "@/services/task-service";
 import { formatDate } from "@/lib/utils";
 
-type ActiveTab = "architecture" | "search" | "files" | "tasks";
+type ActiveTab = "architecture" | "search" | "files" | "tasks" | "branches" | "pull_requests";
 
 export default function RepositoryDetailPage() {
   const params = useParams();
@@ -128,6 +131,34 @@ export default function RepositoryDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["repository-architecture", repoId] });
       queryClient.invalidateQueries({ queryKey: ["repository-files", repoId] });
       queryClient.invalidateQueries({ queryKey: ["repository-symbols", repoId] });
+    },
+  });
+
+  // Fetch repository branches
+  const {
+    data: branches = [],
+    isLoading: branchesLoading,
+  } = useQuery({
+    queryKey: ["repository-branches", repoId],
+    queryFn: () => githubService.listRepositoryBranches(repoId),
+    enabled: !!repoId,
+  });
+
+  // Fetch pull requests
+  const {
+    data: pullRequests = [],
+    isLoading: prsLoading,
+  } = useQuery({
+    queryKey: ["repository-pull-requests", repoId],
+    queryFn: () => githubService.listPullRequests({ repository_id: repoId }),
+    enabled: !!repoId,
+  });
+
+  // Sync PR mutation
+  const syncPRMutation = useMutation({
+    mutationFn: (id: string) => githubService.syncPullRequest(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["repository-pull-requests", repoId] });
     },
   });
 
@@ -351,6 +382,30 @@ export default function RepositoryDetailPage() {
           >
             <CheckSquare className="w-4 h-4" />
             <span>Tasks ({tasks.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("branches")}
+            className={`pb-3 px-3 flex items-center gap-2 border-b-2 transition-colors ${
+              activeTab === "branches"
+                ? "border-primary text-foreground font-semibold"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <GitBranch className="w-4 h-4" />
+            <span>Branches ({branches.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("pull_requests")}
+            className={`pb-3 px-3 flex items-center gap-2 border-b-2 transition-colors ${
+              activeTab === "pull_requests"
+                ? "border-primary text-foreground font-semibold"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <GitPullRequest className="w-4 h-4" />
+            <span>Pull Requests ({pullRequests.length})</span>
           </button>
         </div>
 
@@ -776,6 +831,154 @@ export default function RepositoryDetailPage() {
                       </p>
                     </div>
                   </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab: Branches */}
+        {activeTab === "branches" && (
+          <div className="space-y-4">
+            {branchesLoading ? (
+              <div className="p-8 text-center border border-border rounded-lg bg-card/20">
+                <Loader2 className="w-5 h-5 animate-spin mx-auto text-primary mb-2" />
+                <span className="text-xs text-muted-foreground font-mono">Loading branches...</span>
+              </div>
+            ) : branches.length === 0 ? (
+              <div className="p-8 text-center border border-dashed border-border rounded-lg bg-card/20">
+                <GitBranch className="w-8 h-8 mx-auto text-muted-foreground/40 mb-2" />
+                <p className="text-xs text-muted-foreground">No branches discovered for this repository.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border border border-border rounded-lg bg-card/40 overflow-hidden">
+                {branches.map((b) => (
+                  <div key={b.name} className="p-4 flex items-center justify-between hover:bg-secondary/30 transition-colors">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <GitBranch className="w-4 h-4 text-primary" />
+                        <span className="text-sm font-semibold font-mono text-foreground">{b.name}</span>
+                        {b.is_default && (
+                          <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary border-primary/30">
+                            Default
+                          </Badge>
+                        )}
+                        {b.is_task_branch && (
+                          <Badge variant="secondary" className="text-[10px] bg-blue-500/10 text-blue-400 border-blue-500/20">
+                            Devora Task Branch
+                          </Badge>
+                        )}
+                        {b.is_pushed && (
+                          <Badge variant="outline" className="text-[10px] text-emerald-400 border-emerald-500/20 bg-emerald-500/10">
+                            Pushed to Remote
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground font-mono">
+                        {b.commit_sha ? `HEAD Commit: ${b.commit_sha.slice(0, 8)}` : "Tracking branch"}
+                      </p>
+                    </div>
+                    {b.task_id && (
+                      <Link href={`/tasks/${b.task_id}`}>
+                        <Button variant="ghost" size="sm" className="text-xs gap-1 text-primary hover:bg-primary/10">
+                          View Task
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Tab: Pull Requests */}
+        {activeTab === "pull_requests" && (
+          <div className="space-y-4">
+            {prsLoading ? (
+              <div className="p-8 text-center border border-border rounded-lg bg-card/20">
+                <Loader2 className="w-5 h-5 animate-spin mx-auto text-primary mb-2" />
+                <span className="text-xs text-muted-foreground font-mono">Loading pull requests...</span>
+              </div>
+            ) : pullRequests.length === 0 ? (
+              <div className="p-12 text-center border border-dashed border-border rounded-lg bg-card/20 space-y-2">
+                <GitPullRequest className="w-8 h-8 mx-auto text-muted-foreground/40 mb-2" />
+                <p className="text-sm font-medium text-foreground">No Pull Requests Created Yet</p>
+                <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                  When tasks are executed and developer approval is granted, Devora AI automatically commits changes, pushes the task branch, and opens an audit-ready Pull Request.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {pullRequests.map((pr) => (
+                  <Card key={pr.id} className="bg-card/40 border-border hover:border-primary/40 transition-all">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-foreground flex items-center gap-1.5">
+                              <GitPullRequest className="w-4 h-4 text-primary" />
+                              #{pr.pr_number} {pr.title}
+                            </span>
+                            {pr.state === "open" && (
+                              <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs">
+                                Open
+                              </Badge>
+                            )}
+                            {pr.is_merged && (
+                              <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-xs">
+                                Merged
+                              </Badge>
+                            )}
+                            {pr.state === "closed" && !pr.is_merged && (
+                              <Badge variant="outline" className="text-xs text-muted-foreground">
+                                Closed
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-xs font-mono text-muted-foreground flex items-center gap-2">
+                            <span>Branch: <span className="text-foreground">{pr.head_branch}</span></span>
+                            <span>&rarr;</span>
+                            <span>Base: <span className="text-foreground">{pr.base_branch}</span></span>
+                            <span>•</span>
+                            <span>Created: {formatDate(pr.created_at)}</span>
+                          </div>
+                          {pr.merge_commit_sha && (
+                            <div className="text-[11px] font-mono text-purple-400">
+                              Merge Commit: {pr.merge_commit_sha.slice(0, 8)}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => syncPRMutation.mutate(pr.id)}
+                            disabled={syncPRMutation.isPending}
+                            className="text-xs h-8 gap-1.5"
+                          >
+                            <RefreshCw className={`w-3 h-3 ${syncPRMutation.isPending ? "animate-spin" : ""}`} />
+                            Sync Status
+                          </Button>
+                          <Link href={`/tasks/${pr.task_id}`}>
+                            <Button variant="ghost" size="sm" className="text-xs h-8">
+                              View Task
+                            </Button>
+                          </Link>
+                          <a
+                            href={pr.html_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                          >
+                            <span>Open on GitHub</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}
