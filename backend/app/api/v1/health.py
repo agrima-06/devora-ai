@@ -16,7 +16,7 @@ async def health_check(db: AsyncSession = Depends(get_db)) -> Dict[str, Any]:
     try:
         await db.execute(text("SELECT 1"))
     except Exception as e:
-        db_status = f"unhealthy: {str(e)}"
+        db_status = "unhealthy" if settings.ENVIRONMENT == "production" else f"unhealthy: {str(e)}"
 
     return {
         "status": "healthy" if db_status == "connected" else "degraded",

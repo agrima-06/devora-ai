@@ -100,6 +100,17 @@ class WorkflowService:
         if not repo:
             raise NotFoundException("Repository", task.repository_id)
 
+        # Stage H6 Safety Restriction: Restrict public execution in Showcase Mode
+        if getattr(settings, "SHOWCASE_MODE", False):
+            is_demo = any(
+                demo.lower() in repo.name.lower() or demo.lower() in (repo.full_name or "").lower()
+                for demo in getattr(settings, "DEMO_REPOSITORIES", [])
+            )
+            if not is_demo and not getattr(user, "is_superuser", False):
+                raise BadRequestException(
+                    f"Showcase Mode Active: Autonomous task execution is restricted to approved demonstration repositories ({', '.join(settings.DEMO_REPOSITORIES)}). Connect or select a demonstration repository to proceed."
+                )
+
         # 2. Prepare ephemeral task workspace and isolated git branch
         task_branch = task.task_branch or GitWorkspaceManager.generate_branch_name(task.task_type, str(task.id))
         task.task_branch = task_branch
@@ -598,6 +609,17 @@ class WorkflowService:
         if not repo:
             raise NotFoundException("Repository", task.repository_id)
 
+        # Stage H6 Safety Restriction: Restrict public execution in Showcase Mode
+        if getattr(settings, "SHOWCASE_MODE", False):
+            is_demo = any(
+                demo.lower() in repo.name.lower() or demo.lower() in (repo.full_name or "").lower()
+                for demo in getattr(settings, "DEMO_REPOSITORIES", [])
+            )
+            if not is_demo and not getattr(user, "is_superuser", False):
+                raise BadRequestException(
+                    f"Showcase Mode Active: Autonomous task execution is restricted to approved demonstration repositories ({', '.join(settings.DEMO_REPOSITORIES)}). Connect or select a demonstration repository to proceed."
+                )
+
         # 1. Verify resumption eligibility
         eligible, reason, checkpoint = await self.recovery_manager.is_eligible_for_recovery(task, db, force=force)
         if not eligible or not checkpoint:
@@ -908,55 +930,85 @@ class WorkflowService:
                 except Exception as e:
                     logger.warning("git_commit_warning", error=str(e))
 
-                try:
-                    # Push task branch to remote
-                    repo_res = await db.execute(select(Repository).where(Repository.id == task.repository_id))
-                    repo_obj = repo_res.scalar_one_or_none()
-                    if repo_obj and repo_obj.clone_url:
-                        inst_id = repo_obj.installation_id or 1001
-                        token = await self.github_app.get_installation_access_token(inst_id)
-                        self.git_workspace.push_branch(
-                            workspace_path=task_ws,
-                            branch_name=task.task_branch or f"devora/{task.task_type}-{str(task.id)[:8]}",
-                            remote_url=repo_obj.clone_url,
-                            token=token,
-                        )
-                        # Update GitBranch entity
-                        b_stmt = select(GitBranch).where(
-                            GitBranch.task_id == task.id,
-                            GitBranch.branch_name == task.task_branch,
-                        )
-                        b_res = await db.execute(b_stmt)
-                        b_entity = b_res.scalar_one_or_none()
-                        if b_entity:
-                            b_entity.commit_sha = commit_sha
-                            b_entity.is_pushed = True
-                            b_entity.pushed_at = datetime.now(timezone.utc)
-                except Exception as e:
-                    logger.warning("git_push_warning", error=str(e))
+                # Safety Gate (Stage H6): In Showcase Mode or when automatic push is disabled,
+                # skip remote git write operations to protect external repositories from unauthorized writes
+                if getattr(settings, "SHOWCASE_MODE", False) or getattr(settings, "AUTO_GIT_PUSH_DISABLED", False):
+                    logger.info("showcase_mode_remote_git_push_skipped", task_id=str(task.id))
+                    b_stmt = select(GitBranch).where(
+                        GitBranch.task_id == task.id,
+                        GitBranch.branch_name == task.task_branch,
+                    )
+                    b_res = await db.execute(b_stmt)
+                    b_entity = b_res.scalar_one_or_none()
+                    if b_entity:
+                        b_entity.commit_sha = commit_sha
+                        b_entity.is_pushed = True
+                        b_entity.pushed_at = datetime.now(timezone.utc)
+                    pr_data = {
+                        "pr_number": 42,
+                        "html_url": f"https://github.com/devora-ai/showcase-demo/pull/42",
+                        "head_branch": task.task_branch or "devora/patch",
+                        "base_branch": task.target_branch or "main",
+                        "showcase_simulated": True,
+                    }
+                    await self.broadcaster.emit(
+                        task_id=str(task.id),
+                        event_type="PULL_REQUEST_CREATED",
+                        agent_name="orchestrator",
+                        message=f"[SHOWCASE] Demonstration Pull Request recorded: {pr_data['html_url']} (Remote push requires human authorization)",
+                        payload=pr_data,
+                        db=db,
+                    )
+                else:
+                    try:
+                        # Push task branch to remote
+                        repo_res = await db.execute(select(Repository).where(Repository.id == task.repository_id))
+                        repo_obj = repo_res.scalar_one_or_none()
+                        if repo_obj and repo_obj.clone_url:
+                            inst_id = repo_obj.installation_id or 1001
+                            token = await self.github_app.get_installation_access_token(inst_id)
+                            self.git_workspace.push_branch(
+                                workspace_path=task_ws,
+                                branch_name=task.task_branch or f"devora/{task.task_type}-{str(task.id)[:8]}",
+                                remote_url=repo_obj.clone_url,
+                                token=token,
+                            )
+                            # Update GitBranch entity
+                            b_stmt = select(GitBranch).where(
+                                GitBranch.task_id == task.id,
+                                GitBranch.branch_name == task.task_branch,
+                            )
+                            b_res = await db.execute(b_stmt)
+                            b_entity = b_res.scalar_one_or_none()
+                            if b_entity:
+                                b_entity.commit_sha = commit_sha
+                                b_entity.is_pushed = True
+                                b_entity.pushed_at = datetime.now(timezone.utc)
+                    except Exception as e:
+                        logger.warning("git_push_warning", error=str(e))
 
-            # Publish GitHub Pull Request
-            try:
-                gh_pr = await self.pr_service.create_pull_request_for_task(
-                    db=db,
-                    task_id=task.id,
-                )
-                pr_data = {
-                    "pr_number": gh_pr.pr_number,
-                    "html_url": gh_pr.html_url,
-                    "head_branch": gh_pr.head_branch,
-                    "base_branch": gh_pr.base_branch,
-                }
-                await self.broadcaster.emit(
-                    task_id=str(task.id),
-                    event_type="PULL_REQUEST_CREATED",
-                    agent_name="orchestrator",
-                    message=f"Created Pull Request #{gh_pr.pr_number}: {gh_pr.html_url}",
-                    payload=pr_data,
-                    db=db,
-                )
-            except Exception as e:
-                logger.warning("pr_creation_warning", error=str(e))
+                    # Publish GitHub Pull Request
+                    try:
+                        gh_pr = await self.pr_service.create_pull_request_for_task(
+                            db=db,
+                            task_id=task.id,
+                        )
+                        pr_data = {
+                            "pr_number": gh_pr.pr_number,
+                            "html_url": gh_pr.html_url,
+                            "head_branch": gh_pr.head_branch,
+                            "base_branch": gh_pr.base_branch,
+                        }
+                        await self.broadcaster.emit(
+                            task_id=str(task.id),
+                            event_type="PULL_REQUEST_CREATED",
+                            agent_name="orchestrator",
+                            message=f"Created Pull Request #{gh_pr.pr_number}: {gh_pr.html_url}",
+                            payload=pr_data,
+                            db=db,
+                        )
+                    except Exception as e:
+                        logger.warning("pr_creation_warning", error=str(e))
 
             # Distill completed verified task into persistent project memory
             final_val = final_snap.values if final_snap and final_snap.values else {}

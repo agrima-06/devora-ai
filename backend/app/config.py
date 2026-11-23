@@ -1,5 +1,6 @@
 """Application configuration and settings."""
-from typing import List, Optional
+import json
+from typing import Any, List, Optional
 from pydantic import AnyHttpUrl, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -96,6 +97,65 @@ class Settings(BaseSettings):
     # Model Fallback Configuration
     MODEL_FALLBACK_ENABLED: bool = True
     MODEL_FALLBACK_MODEL: str = "gemini-1.5-flash"
+
+    # Public Showcase Safety Configuration (Stage H6)
+    SHOWCASE_MODE: bool = False
+    DEMO_REPOSITORIES: List[str] = [
+        "demo-calculator",
+        "devora-demo",
+        "sample-repo",
+        "demo",
+    ]
+    AUTO_GIT_PUSH_DISABLED: bool = False
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def assemble_db_connection(cls, v: Optional[str]) -> str:
+        """Normalize database connection string for async SQLAlchemy with asyncpg."""
+        if not v:
+            return "postgresql+asyncpg://postgres:postgres@localhost:5432/devora"
+        v_str = str(v).strip()
+        # Automatically upgrade standard postgresql:// or postgres:// to postgresql+asyncpg://
+        if v_str.startswith("postgres://"):
+            v_str = v_str.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif v_str.startswith("postgresql://") and not v_str.startswith("postgresql+asyncpg://"):
+            v_str = v_str.replace("postgresql://", "postgresql+asyncpg://", 1)
+        # Normalize sslmode query param for asyncpg
+        if "sslmode=require" in v_str and "ssl=require" not in v_str:
+            v_str = v_str.replace("sslmode=require", "ssl=require")
+        return v_str
+
+    @field_validator("BACKEND_CORS_ORIGINS", mode="before")
+    @classmethod
+    def assemble_cors_origins(cls, v: Any) -> List[str]:
+        """Parse CORS origins from comma-separated string, JSON list, or sequence."""
+        if isinstance(v, str):
+            v_str = v.strip()
+            if v_str.startswith("[") and v_str.endswith("]"):
+                try:
+                    return json.loads(v_str)
+                except Exception:
+                    pass
+            return [origin.strip() for origin in v_str.split(",") if origin.strip()]
+        elif isinstance(v, (list, tuple)):
+            return [str(origin).strip() for origin in v if str(origin).strip()]
+        return v
+
+    @field_validator("DEMO_REPOSITORIES", mode="before")
+    @classmethod
+    def assemble_demo_repositories(cls, v: Any) -> List[str]:
+        """Parse demo repositories from comma-separated string, JSON list, or sequence."""
+        if isinstance(v, str):
+            v_str = v.strip()
+            if v_str.startswith("[") and v_str.endswith("]"):
+                try:
+                    return json.loads(v_str)
+                except Exception:
+                    pass
+            return [repo.strip() for repo in v_str.split(",") if repo.strip()]
+        elif isinstance(v, (list, tuple)):
+            return [str(repo).strip() for repo in v if str(repo).strip()]
+        return v
 
 
 settings = Settings()

@@ -1,6 +1,6 @@
 {
   "version": "v1.2.0-test",
-  "created_at": "2026-11-23T00:39:15.598809+00:00",
+  "created_at": "2026-11-23T20:57:07.978543+00:00",
   "algorithm": "LogisticRegression",
   "hyperparameters": {
     "C": 5.0,
@@ -15,7 +15,7 @@
   "is_promoted": true,
   "promotion_reason": "Passed all promotion gates: Weighted F1=1.0000 >= 0.8, Min Precision=1.0000 >= 0.7",
   "model_sha256": "68f70d36e658cbb8a78ed7765044d62455e00b302b3582f15d7f8b63e4964330",
-  "vectorizer_sha256": "94d3b43eb0383e1958090b3df3449126494eb11fcf7c6956defa034abc1f88eb",
+  "vectorizer_sha256": "f24508fbe338ef2605eee59cf48ec682d32c96f94d713ccc33da0430ca7b65dd",
   "sample_counts": {
     "train": 111,
     "val": 25,

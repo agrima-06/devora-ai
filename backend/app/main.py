@@ -75,3 +75,24 @@ async def root():
         "docs": f"{settings.API_V1_STR}/docs",
         "health": f"{settings.API_V1_STR}/health",
     }
+
+
+@app.get("/health", tags=["Root"], summary="Root health check for cloud load balancers and orchestrators")
+@app.get("/healthz", tags=["Root"], summary="Root liveness check")
+async def root_health():
+    """Service health check returning readiness of database connectivity."""
+    db_status = "connected"
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+    except Exception as exc:
+        db_status = "unhealthy" if settings.ENVIRONMENT == "production" else f"unhealthy: {str(exc)}"
+
+    return {
+        "status": "healthy" if db_status == "connected" else "degraded",
+        "version": settings.VERSION,
+        "environment": settings.ENVIRONMENT,
+        "services": {
+            "database": db_status,
+        },
+    }

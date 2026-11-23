@@ -1,0 +1,85 @@
+# ==============================================================================
+# Devora AI — Render Blueprint Deployment Specification
+# Deploys:
+#   1. Managed PostgreSQL 16 with pgvector extension
+#   2. Devora AI FastAPI & LangGraph backend web service
+#   3. Optional background task worker service
+# ==============================================================================
+
+databases:
+  - name: devora-postgres
+    databaseName: devora
+    user: devora_user
+    plan: starter
+    postgresMajorVersion: 16
+    region: oregon
+
+services:
+  # --- Backend Web Service ---
+  - type: web
+    name: devora-backend
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    plan: starter
+    region: oregon
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PROJECT_NAME
+        value: Devora AI
+      - key: SHOWCASE_MODE
+        value: "true"
+      - key: PORT
+        value: "8000"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: devora-postgres
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "1440"
+      - key: BACKEND_CORS_ORIGINS
+        value: "https://app.devora.ai,https://devora.vercel.app,http://localhost:3000"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: "gemini-2.5-flash"
+      - key: GEMINI_EMBEDDING_MODEL
+        value: "text-embedding-004"
+      - key: USE_MOCK_LLM
+        value: "false"
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: DEVORA_MOCK_GITHUB
+        value: "false"
+
+  # --- Background Task Worker (Optional for Heavy Workflows) ---
+  - type: worker
+    name: devora-worker
+    runtime: docker
+    dockerfilePath: backend/Dockerfile
+    dockerContext: backend
+    dockerCommand: "python -m scripts.worker"
+    plan: starter
+    region: oregon
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: SHOWCASE_MODE
+        value: "true"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: devora-postgres
+          property: connectionString
+      - key: SECRET_KEY
+        fromService:
+          type: web
+          name: devora-backend
+          envVarKey: SECRET_KEY
+      - key: GEMINI_API_KEY
+        sync: false

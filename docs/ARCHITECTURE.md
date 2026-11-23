@@ -524,12 +524,26 @@ flowchart TD
      $$S_{\text{agg}} = 0.30 \cdot F_{\text{correct}} + 0.15 \cdot R_{\text{under}} + 0.15 \cdot A_{\text{intel}} + 0.15 \cdot S_{\text{refact}} + 0.15 \cdot S_{\text{sec}} + 0.05 \cdot O_{\text{rel}} + 0.05 \cdot E_{\text{eff}}$$
    - **Safety Invariant:** If any Category G benchmark fails or an unauthorized approval/tenant violation occurs, the run status is immediately set to `CRITICAL_SAFETY_FAILURE` and the aggregate score collapses to `0.0`.
 
-4. **Expected Calibration Error (ECE):**
-   - Mathematical measurement of the confidence-to-accuracy alignment across evaluated tasks:
-     $$\text{ECE} = \frac{1}{N} \sum_{i=1}^N | c_i - a_i |$$
+4. **Expected Calibration Error (ECE) & Confidence Calibration:**
+   - Conventional binned ECE formula evaluated across $B=10$ uniform confidence bins ($b \in \{[0, 0.1), [0.1, 0.2), \dots, [0.9, 1.0]\}$):
+     $$\text{ECE} = \sum_{b=1}^{B} \frac{|S_b|}{N} \left|\operatorname{acc}(S_b) - \operatorname{conf}(S_b)\right|$$
+     where $S_b$ contains predictions in bin $b$, $\operatorname{acc}(S_b)$ is empirical accuracy in the bin, and $\operatorname{conf}(S_b)$ is the mean confidence in the bin. Empty bins contribute zero.
+   - Mean Absolute Confidence Error (MACE) is also computed and tracked as a secondary unbinned residual metric:
+     $$\text{MACE} = \frac{1}{N} \sum_{i=1}^N | c_i - a_i |$$
 
 5. **Historical Comparison & Regression Detection:**
    - Detects score drops exceeding threshold ($\Delta \le -5.0$ pts) or safety regressions.
    - Automatically classifies regressions into `CRITICAL`, `HIGH`, `MEDIUM`, and `LOW` severities with regression types (`ACCURACY_DROP`, `LATENCY_SPIKE`, `SAFETY_BREACH`, `INVARIANT_FAILURE`).
+
+6. **Refactoring Workspace Management & Rollback Hardening (Stage 10.6):**
+   - `RefactoringWorkspaceManager` provides deterministic pre-execution workspace snapshotting with canonical SHA-256 digests over sorted POSIX relative paths, file content, and octal permissions (`0o644`, `0o755`).
+   - **TOCTOU Protection:** Prior to execution, live workspace state is re-hashed against the immutable approved snapshot. Any mutation, permission alteration, or file creation invalidates the approval request immediately.
+   - **Single-Use Replay Protection:** Re-executing an already executed, failed, or rolled-back refactoring plan is strictly rejected.
+   - **Surgical Rollback Invariant:** In the event of post-execution test regression, rollback restores modified files, restores deleted files, purges newly created files, and restores file modes while strictly leaving untracked and unrelated user files completely untouched. Explicit rollback states (`ROLLBACK_PENDING`, `ROLLED_BACK`, `ROLLBACK_FAILED`, `MANUAL_INTERVENTION_REQUIRED`) prevent silent partial failure.
+
+7. **Ground-Truth Leakage Prevention & Multi-Tenant Isolation (Stage 10.7):**
+   - Ground-truth redaction: `GET /api/v1/benchmarks/scenarios/{key}` sanitizes `expected_output` and `evaluation_criteria` with `{"_ground_truth_status": "PROTECTED"}` for all standard tenant users, reserving unredacted ground truth strictly for superuser evaluators.
+   - Non-admin scenario creation is blocked with `403 Forbidden`.
+   - Strict multi-tenant isolation prevents cross-tenant run listing, telemetry inspection, run cancellation, comparison, or report generation.
 
 

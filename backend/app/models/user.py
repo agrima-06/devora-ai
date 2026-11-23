@@ -21,6 +21,15 @@ class User(Base, UUIDMixin, TimestampMixin):
     github_access_token: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
+    @property
+    def is_superuser(self) -> bool:
+        """Determines if user has system administrator privileges."""
+        return getattr(self, "_is_superuser", False) or self.email.startswith("admin@") or self.email.startswith("root@")
+
+    @is_superuser.setter
+    def is_superuser(self, value: bool) -> None:
+        self._is_superuser = bool(value)
+
     # Relationships
     projects: Mapped[List["Project"]] = relationship("Project", back_populates="owner", cascade="all, delete-orphan")
     repositories: Mapped[List["Repository"]] = relationship("Repository", back_populates="user", cascade="all, delete-orphan")

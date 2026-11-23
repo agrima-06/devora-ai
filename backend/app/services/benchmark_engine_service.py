@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.core.exceptions import BadRequestException, NotFoundException
+from app.core.exceptions import BadRequestException, ForbiddenException, NotFoundException
 from app.models.benchmark_engine import (
     BenchmarkRegression,
     BenchmarkScenario,
@@ -189,15 +189,74 @@ class BenchmarkScoringService:
     @classmethod
     def calculate_calibration_error(
         cls,
-        results: List[BenchmarkScenarioResult],
+        results: List[Any],
+        num_bins: int = 10,
     ) -> float:
-        """Calculate Expected Calibration Error (ECE) between confidence and accuracy."""
+        """Calculate conventional binned Expected Calibration Error (ECE).
+
+        Formula:
+            ECE = sum_{b=1}^{B} (|S_b| / N) * |acc(S_b) - conf(S_b)|
+
+        Where:
+            - B is the number of confidence bins (default 10: [0.0, 0.1), ..., [0.9, 1.0]).
+            - S_b is the set of predictions falling into bin b.
+            - N is the total count of valid observations with non-null confidence.
+            - acc(S_b) is empirical accuracy in bin b (mean of score / 100.0).
+            - conf(S_b) is mean predicted confidence in bin b.
+            - Empty bins contribute 0.0 to the summation.
+            - Handles boundary values: 0.0 in bin 0, 1.0 in final bin (bin B-1).
+        """
+        valid_pairs: List[Tuple[float, float]] = []
+        for r in results:
+            conf = getattr(r, "confidence_score", None) if not isinstance(r, dict) else r.get("confidence_score")
+            score = getattr(r, "score", None) if not isinstance(r, dict) else r.get("score")
+            if conf is not None and score is not None:
+                c_val = max(0.0, min(1.0, float(conf)))
+                a_val = max(0.0, min(1.0, float(score) / 100.0))
+                valid_pairs.append((c_val, a_val))
+
+        n_total = len(valid_pairs)
+        if n_total == 0:
+            return 0.0
+
+        if num_bins <= 0:
+            num_bins = 10
+
+        bin_confidences: List[List[float]] = [[] for _ in range(num_bins)]
+        bin_accuracies: List[List[float]] = [[] for _ in range(num_bins)]
+
+        for conf, acc in valid_pairs:
+            bin_idx = int(conf * num_bins)
+            if bin_idx >= num_bins:
+                bin_idx = num_bins - 1
+            bin_confidences[bin_idx].append(conf)
+            bin_accuracies[bin_idx].append(acc)
+
+        ece = 0.0
+        for b in range(num_bins):
+            bin_size = len(bin_confidences[b])
+            if bin_size == 0:
+                continue
+            bin_weight = bin_size / n_total
+            mean_conf = sum(bin_confidences[b]) / bin_size
+            mean_acc = sum(bin_accuracies[b]) / bin_size
+            ece += bin_weight * abs(mean_acc - mean_conf)
+
+        return round(ece, 4)
+
+    @classmethod
+    def calculate_mean_absolute_confidence_error(
+        cls,
+        results: List[Any],
+    ) -> float:
+        """Calculate unbinned Mean Absolute Confidence Error (MACE): (1/N) * sum(|conf - acc|)."""
         errors: List[float] = []
         for r in results:
-            if r.confidence_score is not None:
-                accuracy = r.score / 100.0
-                errors.append(abs(r.confidence_score - accuracy))
-        return round(statistics.mean(errors), 3) if errors else 0.045
+            conf = getattr(r, "confidence_score", None) if not isinstance(r, dict) else r.get("confidence_score")
+            score = getattr(r, "score", None) if not isinstance(r, dict) else r.get("score")
+            if conf is not None and score is not None:
+                errors.append(abs(float(conf) - (float(score) / 100.0)))
+        return round(statistics.mean(errors), 4) if errors else 0.0
 
 
 # -----------------------------------------------------------------------------
@@ -261,6 +320,7 @@ class BenchmarkEngineService:
         db: AsyncSession,
         category: Optional[str] = None,
         is_active: Optional[bool] = None,
+        user: Optional[User] = None,
     ) -> BenchmarkScenariosListResponse:
         """List registered benchmark scenarios with category distribution counts."""
         await self.ensure_dataset_seeded(db)
@@ -278,18 +338,21 @@ class BenchmarkEngineService:
         for s in scenarios:
             counts[s.category] = counts.get(s.category, 0) + 1
 
+        is_admin = user is not None and getattr(user, "is_superuser", False)
         return BenchmarkScenariosListResponse(
             total_count=len(scenarios),
             category_counts=counts,
-            scenarios=[self._build_scenario_response(s) for s in scenarios],
+            scenarios=[self._build_scenario_response(s, redact_ground_truth=not is_admin) for s in scenarios],
         )
 
     async def get_scenario(
         self,
         scenario_key_or_id: str,
         db: AsyncSession,
+        user: Optional[User] = None,
+        include_ground_truth: bool = False,
     ) -> BenchmarkScenarioResponse:
-        """Fetch a single scenario by key or UUID."""
+        """Fetch a single scenario by key or UUID, protecting hidden ground truth from unprivileged callers."""
         await self.ensure_dataset_seeded(db)
 
         stmt = select(BenchmarkScenario).where(
@@ -301,14 +364,19 @@ class BenchmarkEngineService:
         if not scenario:
             raise NotFoundException("BenchmarkScenario", scenario_key_or_id)
 
-        return self._build_scenario_response(scenario)
+        is_authorized = include_ground_truth or (user is not None and getattr(user, "is_superuser", False))
+        return self._build_scenario_response(scenario, redact_ground_truth=not is_authorized)
 
     async def create_scenario(
         self,
         payload: BenchmarkScenarioCreate,
         db: AsyncSession,
+        user: Optional[User] = None,
     ) -> BenchmarkScenarioResponse:
-        """Register a new benchmark scenario."""
+        """Register a new benchmark scenario with admin authorization check."""
+        if user is not None and not getattr(user, "is_superuser", False):
+            raise ForbiddenException("Administrative access required to register benchmark scenarios.")
+
         stmt = select(BenchmarkScenario).where(BenchmarkScenario.scenario_key == payload.scenario_key)
         res = await db.execute(stmt)
         if res.scalar_one_or_none():
@@ -332,7 +400,7 @@ class BenchmarkEngineService:
         await db.commit()
         await db.refresh(scenario)
 
-        return self._build_scenario_response(scenario)
+        return self._build_scenario_response(scenario, redact_ground_truth=False)
 
     # -------------------------------------------------------------------------
     # SUITE EXECUTION & SCORING
@@ -493,11 +561,14 @@ class BenchmarkEngineService:
     async def list_runs(
         self,
         db: AsyncSession,
+        user: Optional[User] = None,
         model_name: Optional[str] = None,
         status_filter: Optional[str] = None,
     ) -> BenchmarkSuiteRunsListResponse:
-        """List benchmark suite runs ordered by creation date."""
+        """List benchmark suite runs ordered by creation date, enforcing tenant isolation."""
         stmt = select(BenchmarkSuiteRun).order_by(desc(BenchmarkSuiteRun.created_at))
+        if user and not getattr(user, "is_superuser", False):
+            stmt = stmt.where(BenchmarkSuiteRun.triggered_by == user.id)
         if model_name and model_name.lower() != "all":
             stmt = stmt.where(BenchmarkSuiteRun.model_name == model_name)
         if status_filter and status_filter.lower() != "all":
@@ -515,13 +586,17 @@ class BenchmarkEngineService:
         self,
         run_id: uuid.UUID,
         db: AsyncSession,
+        user: Optional[User] = None,
     ) -> BenchmarkSuiteRunDetailResponse:
-        """Get detailed execution outcome of a benchmark suite run."""
+        """Get detailed execution outcome of a benchmark suite run with tenant authorization."""
         stmt = select(BenchmarkSuiteRun).where(BenchmarkSuiteRun.id == run_id)
         res = await db.execute(stmt)
         run = res.scalar_one_or_none()
         if not run:
             raise NotFoundException("BenchmarkSuiteRun", run_id)
+
+        if user and not getattr(user, "is_superuser", False) and run.triggered_by and run.triggered_by != user.id:
+            raise ForbiddenException("Access denied: You do not have permission to view this benchmark run.")
 
         # Fetch results
         res_stmt = (
@@ -538,13 +613,17 @@ class BenchmarkEngineService:
         self,
         run_id: uuid.UUID,
         db: AsyncSession,
+        user: Optional[User] = None,
     ) -> BenchmarkSuiteRunResponse:
-        """Cancel an in-progress benchmark suite run."""
+        """Cancel an in-progress benchmark suite run with tenant authorization."""
         stmt = select(BenchmarkSuiteRun).where(BenchmarkSuiteRun.id == run_id)
         res = await db.execute(stmt)
         run = res.scalar_one_or_none()
         if not run:
             raise NotFoundException("BenchmarkSuiteRun", run_id)
+
+        if user and not getattr(user, "is_superuser", False) and run.triggered_by and run.triggered_by != user.id:
+            raise ForbiddenException("Access denied: You do not have permission to cancel this benchmark run.")
 
         if run.status in ("COMPLETED", "FAILED", "CRITICAL_SAFETY_FAILURE"):
             raise BadRequestException(f"Cannot cancel run in terminal state '{run.status}'.")
@@ -564,6 +643,7 @@ class BenchmarkEngineService:
         self,
         request: BenchmarkRunComparisonRequest,
         db: AsyncSession,
+        user: Optional[User] = None,
     ) -> BenchmarkRunComparisonResponse:
         """Perform granular regression analysis between baseline and target suite runs."""
         base_id = uuid.UUID(request.baseline_run_id)
@@ -576,6 +656,10 @@ class BenchmarkEngineService:
         target_run = (await db.execute(select(BenchmarkSuiteRun).where(BenchmarkSuiteRun.id == target_id))).scalar_one_or_none()
         if not target_run:
             raise NotFoundException("BenchmarkSuiteRun (Target)", target_id)
+
+        if user and not getattr(user, "is_superuser", False):
+            if (base_run.triggered_by and base_run.triggered_by != user.id) or (target_run.triggered_by and target_run.triggered_by != user.id):
+                raise ForbiddenException("Access denied: You can only compare benchmark runs belonging to your tenant.")
 
         # Fetch results for both runs
         base_res_stmt = (
@@ -697,9 +781,10 @@ class BenchmarkEngineService:
         self,
         run_id: uuid.UUID,
         db: AsyncSession,
+        user: Optional[User] = None,
     ) -> BenchmarkReportResponse:
-        """Generate audit-ready Markdown benchmark evaluation report."""
-        detail = await self.get_run(run_id, db)
+        """Generate audit-ready Markdown benchmark evaluation report with tenant authorization."""
+        detail = await self.get_run(run_id=run_id, db=db, user=user)
 
         md_lines = [
             f"# Devora AI — Benchmark Evaluation Report",
@@ -789,7 +874,25 @@ class BenchmarkEngineService:
     # HELPERS
     # -------------------------------------------------------------------------
 
-    def _build_scenario_response(self, sc: BenchmarkScenario) -> BenchmarkScenarioResponse:
+    def _build_scenario_response(
+        self,
+        sc: BenchmarkScenario,
+        redact_ground_truth: bool = False,
+    ) -> BenchmarkScenarioResponse:
+        expected = sc.expected_output or {}
+        criteria = sc.evaluation_criteria or {}
+
+        if redact_ground_truth:
+            expected = {
+                "_ground_truth_status": "PROTECTED",
+                "_redaction_reason": "Evaluator-only ground truth is withheld to prevent benchmark contamination.",
+                "_invariants_count": len(expected),
+            }
+            criteria = {
+                "_evaluation_type": sc.eval_type,
+                "_protected": True,
+            }
+
         return BenchmarkScenarioResponse(
             id=str(sc.id),
             scenario_key=sc.scenario_key,
@@ -799,8 +902,8 @@ class BenchmarkEngineService:
             difficulty=sc.difficulty,
             eval_type=sc.eval_type,
             input_context=sc.input_context or {},
-            expected_output=sc.expected_output or {},
-            evaluation_criteria=sc.evaluation_criteria or {},
+            expected_output=expected,
+            evaluation_criteria=criteria,
             is_active=sc.is_active,
             version=sc.version,
             tags=sc.tags or [],

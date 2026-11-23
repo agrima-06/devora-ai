@@ -1607,16 +1607,19 @@ Standard Error Codes:
   * **Response (200 OK):** `BenchmarkScenariosListResponse`
 
 * `GET /api/v1/benchmarks/scenarios/{scenario_key}`
-  * **Summary:** Fetch a single scenario by key with expected output assertions and criteria.
+  * **Summary:** Fetch a single scenario by key.
+  * **Ground-Truth Redaction Invariant:** `expected_output` and `evaluation_criteria` are protected from unprivileged callers and redacted with `{"_ground_truth_status": "PROTECTED"}` to prevent ground-truth leakage into evaluation contexts. Full criteria require superuser evaluator authorization.
   * **Response (200 OK):** `BenchmarkScenarioResponse`
 
 * `POST /api/v1/benchmarks/scenarios`
   * **Summary:** Register a custom benchmark evaluation scenario.
+  * **Authorization:** Superuser / Evaluator Admin privileges required (`403 Forbidden` for standard users).
   * **Request Body:** `BenchmarkScenarioCreate`
   * **Response (201 Created):** `BenchmarkScenarioResponse`
 
 * `POST /api/v1/benchmarks/runs`
   * **Summary:** Trigger evaluation suite run across canonical categories.
+  * **Tenant Scoping:** The resulting `BenchmarkSuiteRun` is strictly bound to the authenticated user's `tenant_id`.
   * **Request Body:** `BenchmarkSuiteRunRequest`
     ```json
     {
@@ -1630,16 +1633,19 @@ Standard Error Codes:
   * **Response (201 Created):** `BenchmarkSuiteRunDetailResponse`
 
 * `GET /api/v1/benchmarks/runs`
-  * **Summary:** List historical benchmark suite runs with optional filtering.
+  * **Summary:** List historical benchmark suite runs for the authenticated tenant.
   * **Query Parameters:** `model_name` (optional), `status` (optional).
+  * **Multi-Tenant Isolation:** Strictly returns runs belonging to the caller's tenant.
   * **Response (200 OK):** `BenchmarkSuiteRunsListResponse`
 
 * `GET /api/v1/benchmarks/runs/{run_id}`
   * **Summary:** Get complete execution results and telemetry for a specific run.
+  * **Multi-Tenant Isolation:** Returns `404 Not Found` if the requested run does not belong to the caller's tenant.
   * **Response (200 OK):** `BenchmarkSuiteRunDetailResponse`
 
 * `POST /api/v1/benchmarks/runs/{run_id}/cancel`
   * **Summary:** Cancel an active or pending suite run.
+  * **Multi-Tenant Isolation:** Returns `404 Not Found` if the requested run does not belong to the caller's tenant.
   * **Response (200 OK):** `BenchmarkSuiteRunResponse`
 
 * `POST /api/v1/benchmarks/compare`

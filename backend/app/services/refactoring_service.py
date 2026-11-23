@@ -3,13 +3,14 @@
 import hashlib
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.core.exceptions import BadRequestException, NotFoundException
 from app.models.refactoring_execution import RefactoringExecution
 from app.models.refactoring_plan import RefactoringPlan
@@ -33,6 +34,12 @@ from app.schemas.refactoring import (
 )
 from app.services.architecture_drift_service import ArchitectureDriftService
 from app.services.architecture_inference_service import ArchitectureInferenceService
+from app.services.refactoring_workspace_manager import (
+    RefactoringWorkspaceManager,
+    RollbackResult,
+    RollbackStatus,
+    WorkspaceSnapshot,
+)
 from app.services.technical_debt_service import TechnicalDebtService
 
 
@@ -47,10 +54,12 @@ class ArchitectureAwareRefactoringService:
         drift_service: Optional[ArchitectureDriftService] = None,
         debt_service: Optional[TechnicalDebtService] = None,
         inference_service: Optional[ArchitectureInferenceService] = None,
+        workspace_manager: Optional[RefactoringWorkspaceManager] = None,
     ) -> None:
         self.drift_service = drift_service or ArchitectureDriftService()
         self.debt_service = debt_service or TechnicalDebtService()
         self.inference_service = inference_service or ArchitectureInferenceService()
+        self.workspace_manager = workspace_manager or RefactoringWorkspaceManager()
 
     async def get_repository_for_user(
         self,
@@ -82,6 +91,17 @@ class ArchitectureAwareRefactoringService:
     ) -> RefactoringRecommendationsResponse:
         """Synthesize explainable, evidence-backed refactoring proposals from verified drift and debt findings."""
         repo = await self.get_repository_for_user(repository_id, user, db)
+
+        # Stage H6 Safety Restriction: Restrict execution in Showcase Mode
+        if getattr(settings, "SHOWCASE_MODE", False):
+            is_demo = any(
+                demo.lower() in repo.name.lower() or demo.lower() in (repo.full_name or "").lower()
+                for demo in getattr(settings, "DEMO_REPOSITORIES", [])
+            )
+            if not is_demo and not getattr(user, "is_superuser", False):
+                raise BadRequestException(
+                    f"Showcase Mode Active: Refactoring execution is restricted to approved demonstration repositories ({', '.join(settings.DEMO_REPOSITORIES)})."
+                )
 
         # 1. Fetch latest drift & debt summaries
         drift_resp = await self.drift_service.get_drift_summary(repository_id, user, db)
@@ -484,6 +504,17 @@ class ArchitectureAwareRefactoringService:
         """Synthesize an ordered, dependency-aware refactoring plan from selected recommendations."""
         repo = await self.get_repository_for_user(repository_id, user, db)
 
+        # Stage H6 Safety Restriction: Restrict execution in Showcase Mode
+        if getattr(settings, "SHOWCASE_MODE", False):
+            is_demo = any(
+                demo.lower() in repo.name.lower() or demo.lower() in (repo.full_name or "").lower()
+                for demo in getattr(settings, "DEMO_REPOSITORIES", [])
+            )
+            if not is_demo and not getattr(user, "is_superuser", False):
+                raise BadRequestException(
+                    f"Showcase Mode Active: Refactoring execution is restricted to approved demonstration repositories ({', '.join(settings.DEMO_REPOSITORIES)})."
+                )
+
         # 1. Fetch all recommendations to match IDs
         all_recs_resp = await self.generate_recommendations(repository_id, user, db)
         rec_map = {r.recommendation_id: r for r in all_recs_resp.recommendations}
@@ -767,6 +798,17 @@ class ArchitectureAwareRefactoringService:
         """List refactoring plans for a repository."""
         repo = await self.get_repository_for_user(repository_id, user, db)
 
+        # Stage H6 Safety Restriction: Restrict execution in Showcase Mode
+        if getattr(settings, "SHOWCASE_MODE", False):
+            is_demo = any(
+                demo.lower() in repo.name.lower() or demo.lower() in (repo.full_name or "").lower()
+                for demo in getattr(settings, "DEMO_REPOSITORIES", [])
+            )
+            if not is_demo and not getattr(user, "is_superuser", False):
+                raise BadRequestException(
+                    f"Showcase Mode Active: Refactoring execution is restricted to approved demonstration repositories ({', '.join(settings.DEMO_REPOSITORIES)})."
+                )
+
         stmt = (
             select(RefactoringPlan)
             .where(RefactoringPlan.repository_id == repo.id)
@@ -796,6 +838,17 @@ class ArchitectureAwareRefactoringService:
         """Get details of a specific refactoring plan."""
         repo = await self.get_repository_for_user(repository_id, user, db)
 
+        # Stage H6 Safety Restriction: Restrict execution in Showcase Mode
+        if getattr(settings, "SHOWCASE_MODE", False):
+            is_demo = any(
+                demo.lower() in repo.name.lower() or demo.lower() in (repo.full_name or "").lower()
+                for demo in getattr(settings, "DEMO_REPOSITORIES", [])
+            )
+            if not is_demo and not getattr(user, "is_superuser", False):
+                raise BadRequestException(
+                    f"Showcase Mode Active: Refactoring execution is restricted to approved demonstration repositories ({', '.join(settings.DEMO_REPOSITORIES)})."
+                )
+
         stmt = select(RefactoringPlan).where(
             RefactoringPlan.id == plan_id,
             RefactoringPlan.repository_id == repo.id,
@@ -819,9 +872,21 @@ class ArchitectureAwareRefactoringService:
         db: AsyncSession,
         diff_hash: Optional[str] = None,
         notes: Optional[str] = None,
+        workspace_path: Optional[Path] = None,
     ) -> RefactoringPlanResponse:
         """Approve a refactoring plan, cryptographically binding approval to an exact diff hash."""
         repo = await self.get_repository_for_user(repository_id, user, db)
+
+        # Stage H6 Safety Restriction: Restrict execution in Showcase Mode
+        if getattr(settings, "SHOWCASE_MODE", False):
+            is_demo = any(
+                demo.lower() in repo.name.lower() or demo.lower() in (repo.full_name or "").lower()
+                for demo in getattr(settings, "DEMO_REPOSITORIES", [])
+            )
+            if not is_demo and not getattr(user, "is_superuser", False):
+                raise BadRequestException(
+                    f"Showcase Mode Active: Refactoring execution is restricted to approved demonstration repositories ({', '.join(settings.DEMO_REPOSITORIES)})."
+                )
 
         stmt = select(RefactoringPlan).where(
             RefactoringPlan.id == plan_id,
@@ -832,8 +897,21 @@ class ArchitectureAwareRefactoringService:
         if not plan:
             raise NotFoundException("RefactoringPlan", plan_id)
 
+        # Invariant: cannot re-approve an already executed plan
+        if plan.execution_status in ("COMPLETED", "EXECUTING", "ROLLED_BACK"):
+            raise BadRequestException(f"Cannot approve plan {plan_id}: Plan has already executed.")
+
         # Compute or verify diff hash binding
-        computed_hash = diff_hash or self._compute_snapshot_hash(plan)
+        if workspace_path and Path(workspace_path).exists():
+            snapshot = self.workspace_manager.create_snapshot(
+                workspace_root=Path(workspace_path),
+                plan_id=str(plan.id),
+                source_revision=plan.source_revision or "HEAD",
+                target_files=plan.target_files,
+            )
+            computed_hash = snapshot.canonical_hash
+        else:
+            computed_hash = diff_hash or self._compute_snapshot_hash(plan)
 
         plan.approval_status = "APPROVED"
         plan.approved_by = user.id
@@ -856,6 +934,17 @@ class ArchitectureAwareRefactoringService:
     ) -> RefactoringPlanResponse:
         """Reject a refactoring plan with optional reviewer notes."""
         repo = await self.get_repository_for_user(repository_id, user, db)
+
+        # Stage H6 Safety Restriction: Restrict execution in Showcase Mode
+        if getattr(settings, "SHOWCASE_MODE", False):
+            is_demo = any(
+                demo.lower() in repo.name.lower() or demo.lower() in (repo.full_name or "").lower()
+                for demo in getattr(settings, "DEMO_REPOSITORIES", [])
+            )
+            if not is_demo and not getattr(user, "is_superuser", False):
+                raise BadRequestException(
+                    f"Showcase Mode Active: Refactoring execution is restricted to approved demonstration repositories ({', '.join(settings.DEMO_REPOSITORIES)})."
+                )
 
         stmt = select(RefactoringPlan).where(
             RefactoringPlan.id == plan_id,
@@ -899,9 +988,24 @@ class ArchitectureAwareRefactoringService:
         diff_hash: Optional[str] = None,
         dry_run: bool = False,
         simulate_regression: bool = False,
+        workspace_path: Optional[Path] = None,
+        force_corrupted_snapshot: bool = False,
+        force_permission_failure: bool = False,
+        force_partial_failure: bool = False,
     ) -> RefactoringExecutionResponse:
         """Execute an approved refactoring plan with behavioral preservation checks and rollback."""
         repo = await self.get_repository_for_user(repository_id, user, db)
+
+        # Stage H6 Safety Restriction: Restrict execution in Showcase Mode
+        if getattr(settings, "SHOWCASE_MODE", False):
+            is_demo = any(
+                demo.lower() in repo.name.lower() or demo.lower() in (repo.full_name or "").lower()
+                for demo in getattr(settings, "DEMO_REPOSITORIES", [])
+            )
+            if not is_demo and not getattr(user, "is_superuser", False):
+                raise BadRequestException(
+                    f"Showcase Mode Active: Refactoring execution is restricted to approved demonstration repositories ({', '.join(settings.DEMO_REPOSITORIES)})."
+                )
 
         stmt = select(RefactoringPlan).where(
             RefactoringPlan.id == plan_id,
@@ -916,7 +1020,26 @@ class ArchitectureAwareRefactoringService:
         if plan.requires_human_approval and plan.approval_status != "APPROVED":
             raise BadRequestException(f"Plan {plan.id} requires explicit human approval before execution.")
 
-        # 2. Diff-Hash Invalidation Guardrail
+        # 2. Approval Replay Protection: One-time consumption
+        if plan.execution_status in ("COMPLETED", "EXECUTING", "ROLLED_BACK"):
+            raise BadRequestException(
+                f"Execution rejected: Plan {plan.id} has already been executed (status: {plan.execution_status}). "
+                "Approval replay is forbidden."
+            )
+
+        # 3. Approval Expiry Check (24-hour validity window)
+        if plan.approved_at:
+            approved_at = plan.approved_at
+            if approved_at.tzinfo is None:
+                approved_at = approved_at.replace(tzinfo=timezone.utc)
+            age_seconds = (datetime.now(timezone.utc) - approved_at).total_seconds()
+            if age_seconds > 86400:
+                plan.approval_status = "EXPIRED"
+                plan.execution_status = "FAILED"
+                await db.commit()
+                raise BadRequestException(f"Execution rejected: Approval for plan {plan.id} has expired.")
+
+        # 4. Diff-Hash & TOCTOU Workspace Invalidation Guardrail
         current_hash = diff_hash or plan.approved_diff_hash or self._compute_snapshot_hash(plan)
         if plan.approved_diff_hash and diff_hash and diff_hash != plan.approved_diff_hash:
             # Diff changed after approval -> invalidate!
@@ -928,7 +1051,27 @@ class ArchitectureAwareRefactoringService:
                 "Approval has been invalidated; please re-review and re-approve."
             )
 
-        # 3. Snapshot Baseline Metrics & Test Identities Before Refactoring
+        # TOCTOU Workspace Verification
+        workspace_snapshot: Optional[WorkspaceSnapshot] = None
+        if workspace_path and Path(workspace_path).exists():
+            w_path = Path(workspace_path).resolve()
+            temp_snapshot = self.workspace_manager.create_snapshot(
+                workspace_root=w_path,
+                plan_id=str(plan.id),
+                source_revision=plan.source_revision or "HEAD",
+                target_files=plan.target_files,
+            )
+            if plan.approved_diff_hash and temp_snapshot.canonical_hash != plan.approved_diff_hash:
+                plan.approval_status = "INVALIDATED"
+                plan.execution_status = "FAILED"
+                await db.commit()
+                raise BadRequestException(
+                    "Execution rejected: TOCTOU violation detected. Workspace was modified after approval. "
+                    "Approval has been invalidated; please re-review and re-approve."
+                )
+            workspace_snapshot = temp_snapshot
+
+        # 5. Snapshot Baseline Metrics & Test Identities Before Refactoring
         debt_before = await self.debt_service.get_technical_debt_summary(repository_id, user, db)
         drift_before = await self.drift_service.get_drift_summary(repository_id, user, db)
 
@@ -945,7 +1088,7 @@ class ArchitectureAwareRefactoringService:
             "passed_test_ids_before": baseline_test_ids,
         }
 
-        # 4. Create Execution Record
+        # 6. Create Execution Record
         execution = RefactoringExecution(
             plan_id=plan.id,
             repository_id=repo.id,
@@ -960,7 +1103,7 @@ class ArchitectureAwareRefactoringService:
         await db.commit()
         await db.refresh(execution)
 
-        # 5. Synthesize Execution Diff & Validate Behavioral Preservation
+        # 7. Synthesize Execution Diff & Execute Genuine Steps if Workspace Provided
         simulated_diff = self._generate_simulated_diff(plan)
         execution.diff_content = simulated_diff
         execution.diff_hash = hashlib.sha256(simulated_diff.encode("utf-8")).hexdigest()
@@ -968,21 +1111,40 @@ class ArchitectureAwareRefactoringService:
         execution.lines_added = len(plan.ordered_steps) * 15
         execution.lines_removed = len(plan.ordered_steps) * 8
 
-        # 6. Behavioral Preservation: Evaluate Test Delta & Rollback Trigger
+        if workspace_path and Path(workspace_path).exists():
+            self.workspace_manager.execute_refactoring_steps(
+                workspace_root=Path(workspace_path),
+                steps=plan.ordered_steps,
+            )
+
+        # 8. Behavioral Preservation: Evaluate Test Delta & Rollback Trigger
         score_reduction = min(25.0, len(plan.finding_ids) * 8.0)
         after_debt_score = max(0.0, debt_before.overall_debt_score - score_reduction)
         after_drift_count = max(0, drift_before.total_violations - len(plan.finding_ids))
 
         # Check for simulated or detected regressions
         if simulate_regression:
-            # Active regression triggered -> rollback
             newly_failed = [baseline_test_ids[-1]] if baseline_test_ids else ["tests::regression_induced"]
             post_test_ids = [t for t in baseline_test_ids if t not in newly_failed]
             rollback_reason = (
                 f"Automated rollback triggered: test suite regression detected. Newly failed tests: {newly_failed}"
             )
 
-            execution.status = "ROLLED_BACK"
+            rollback_status_str = "ROLLED_BACK"
+            if workspace_snapshot and workspace_path and Path(workspace_path).exists():
+                r_res = self.workspace_manager.rollback(
+                    workspace_root=Path(workspace_path),
+                    snapshot=workspace_snapshot,
+                    target_files=plan.target_files,
+                    force_corrupted_snapshot=force_corrupted_snapshot,
+                    force_permission_failure=force_permission_failure,
+                    force_partial_failure=force_partial_failure,
+                )
+                rollback_status_str = r_res.status.value
+                if not r_res.success:
+                    rollback_reason = f"{rollback_reason} | Filesystem rollback outcome: {r_res.error_message}"
+
+            execution.status = rollback_status_str
             execution.baseline_tests_passed = True
             execution.post_tests_passed = False
             execution.error_message = rollback_reason
@@ -997,13 +1159,14 @@ class ArchitectureAwareRefactoringService:
                 "removed_tests": [],
                 "test_coverage_delta": -2.0,
                 "rollback_occurred": True,
+                "rollback_status": rollback_status_str,
                 "rollback_reason": rollback_reason,
             }
             execution.new_violations_detected = [
                 {"type": "TEST_REGRESSION", "severity": "HIGH", "message": rollback_reason}
             ]
             execution.completed_at = datetime.now(timezone.utc)
-            plan.execution_status = "ROLLED_BACK"
+            plan.execution_status = rollback_status_str
         else:
             # Clean refactoring: behavior strictly preserved
             post_test_ids = list(baseline_test_ids)
@@ -1057,6 +1220,17 @@ class ArchitectureAwareRefactoringService:
     ) -> RefactoringExecutionResponse:
         """Fetch execution record and behavioral preservation outcome."""
         repo = await self.get_repository_for_user(repository_id, user, db)
+
+        # Stage H6 Safety Restriction: Restrict execution in Showcase Mode
+        if getattr(settings, "SHOWCASE_MODE", False):
+            is_demo = any(
+                demo.lower() in repo.name.lower() or demo.lower() in (repo.full_name or "").lower()
+                for demo in getattr(settings, "DEMO_REPOSITORIES", [])
+            )
+            if not is_demo and not getattr(user, "is_superuser", False):
+                raise BadRequestException(
+                    f"Showcase Mode Active: Refactoring execution is restricted to approved demonstration repositories ({', '.join(settings.DEMO_REPOSITORIES)})."
+                )
 
         stmt = select(RefactoringExecution).where(
             RefactoringExecution.id == execution_id,
@@ -1130,11 +1304,11 @@ class ArchitectureAwareRefactoringService:
             repository_id=str(plan.repository_id),
             source_revision=plan.source_revision,
             title=plan.title,
-            description=plan.description,
+            description=plan.description or "",
             category=plan.category,
-            risk_level=plan.risk_level,
-            risk_score=plan.risk_score,
-            confidence=plan.confidence,
+            risk_level=plan.risk_level or "LOW",
+            risk_score=float(plan.risk_score or 0.0),
+            confidence=float(plan.confidence or 0.0),
             requires_human_approval=plan.requires_human_approval,
             approval_status=plan.approval_status,
             approved_by=str(plan.approved_by) if plan.approved_by else None,

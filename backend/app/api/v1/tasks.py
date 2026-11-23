@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.agents.events import WorkflowEventBroadcaster
 from app.api.deps import get_current_user, get_db
+from app.config import settings
 from app.core.exceptions import BadRequestException, NotFoundException
 from app.models.agent_run import AgentRun
 from app.models.approval import Approval
@@ -218,6 +219,23 @@ async def start_workflow(
     db: AsyncSession = Depends(get_db),
 ) -> StartWorkflowResponse:
     """Trigger the LangGraph 9-agent state machine for this task."""
+    # Stage H6 Safety Restriction: Restrict public execution in Showcase Mode
+    if getattr(settings, "SHOWCASE_MODE", False):
+        task_res = await db.execute(select(Task).where(Task.id == task_id))
+        task_rec = task_res.scalar_one_or_none()
+        if task_rec:
+            repo_res = await db.execute(select(Repository).where(Repository.id == task_rec.repository_id))
+            repo_rec = repo_res.scalar_one_or_none()
+            if repo_rec:
+                is_demo = any(
+                    demo.lower() in repo_rec.name.lower() or demo.lower() in (repo_rec.full_name or "").lower()
+                    for demo in getattr(settings, "DEMO_REPOSITORIES", [])
+                )
+                if not is_demo and not getattr(current_user, "is_superuser", False):
+                    raise BadRequestException(
+                        f"Showcase Mode Active: Autonomous task execution is restricted to approved demonstration repositories ({', '.join(settings.DEMO_REPOSITORIES)}). Connect or select a demonstration repository to proceed."
+                    )
+
     service = WorkflowService()
     res = await service.start_task_workflow(task_id, current_user, db)
     return StartWorkflowResponse(
@@ -506,6 +524,21 @@ async def resume_task(
         raise NotFoundException("Task", task_id)
 
     force_resume = payload.force if payload else False
+
+    # Stage H6 Safety Restriction: Restrict public execution in Showcase Mode
+    if getattr(settings, "SHOWCASE_MODE", False):
+        repo_res = await db.execute(select(Repository).where(Repository.id == task.repository_id))
+        repo_rec = repo_res.scalar_one_or_none()
+        if repo_rec:
+            is_demo = any(
+                demo.lower() in repo_rec.name.lower() or demo.lower() in (repo_rec.full_name or "").lower()
+                for demo in getattr(settings, "DEMO_REPOSITORIES", [])
+            )
+            if not is_demo and not getattr(current_user, "is_superuser", False):
+                raise BadRequestException(
+                    f"Showcase Mode Active: Resuming task execution is restricted to approved demonstration repositories ({', '.join(settings.DEMO_REPOSITORIES)})."
+                )
+
     service = WorkflowService()
     res = await service.resume_task_workflow(
         task_id=task_id,

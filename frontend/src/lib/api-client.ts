@@ -7,6 +7,12 @@ export function getStoredToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
+export function getApiBaseUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!envUrl) return "";
+  return envUrl.endsWith("/") ? envUrl.slice(0, -1) : envUrl;
+}
+
 export function setStoredToken(token: string): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(TOKEN_KEY, token);
@@ -24,7 +30,9 @@ interface RequestOptions extends RequestInit {
 export async function apiClient<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
   const { params, headers, ...customConfig } = options;
 
-  let url = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const baseUrl = getApiBaseUrl();
+  const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  let url = baseUrl ? `${baseUrl}${cleanEndpoint}` : cleanEndpoint;
 
   if (params) {
     const searchParams = new URLSearchParams();

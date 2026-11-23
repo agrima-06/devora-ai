@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db
+from app.core.exceptions import ForbiddenException
 from app.models.user import User
 from app.schemas.benchmark import (
     BenchmarkReportResponse,
@@ -37,7 +38,7 @@ async def list_scenarios(
 ) -> BenchmarkScenariosListResponse:
     """List registered ground-truth evaluation benchmark scenarios."""
     service = BenchmarkEngineService()
-    return await service.list_scenarios(db=db, category=category, is_active=is_active)
+    return await service.list_scenarios(db=db, category=category, is_active=is_active, user=current_user)
 
 
 @router.get(
@@ -53,7 +54,7 @@ async def get_scenario(
 ) -> BenchmarkScenarioResponse:
     """Fetch scenario metadata, input context, expected output assertions, and criteria."""
     service = BenchmarkEngineService()
-    return await service.get_scenario(scenario_key_or_id=scenario_key, db=db)
+    return await service.get_scenario(scenario_key_or_id=scenario_key, db=db, user=current_user)
 
 
 @router.post(
@@ -69,7 +70,7 @@ async def create_scenario(
 ) -> BenchmarkScenarioResponse:
     """Register a new ground-truth benchmark scenario with deterministic evaluation criteria."""
     service = BenchmarkEngineService()
-    return await service.create_scenario(payload=payload, db=db)
+    return await service.create_scenario(payload=payload, db=db, user=current_user)
 
 
 @router.post(
@@ -102,7 +103,7 @@ async def list_runs(
 ) -> BenchmarkSuiteRunsListResponse:
     """List historical benchmark suite runs ordered chronologically."""
     service = BenchmarkEngineService()
-    return await service.list_runs(db=db, model_name=model_name, status_filter=status_filter)
+    return await service.list_runs(db=db, user=current_user, model_name=model_name, status_filter=status_filter)
 
 
 @router.get(
@@ -118,7 +119,7 @@ async def get_run_detail(
 ) -> BenchmarkSuiteRunDetailResponse:
     """Fetch complete evaluation results for all scenarios in a suite execution run."""
     service = BenchmarkEngineService()
-    return await service.get_run(run_id=run_id, db=db)
+    return await service.get_run(run_id=run_id, db=db, user=current_user)
 
 
 @router.post(
@@ -134,7 +135,7 @@ async def cancel_run(
 ) -> BenchmarkSuiteRunResponse:
     """Cancel an active or pending benchmark execution run."""
     service = BenchmarkEngineService()
-    return await service.cancel_run(run_id=run_id, db=db)
+    return await service.cancel_run(run_id=run_id, db=db, user=current_user)
 
 
 @router.post(
@@ -150,7 +151,7 @@ async def compare_runs(
 ) -> BenchmarkRunComparisonResponse:
     """Perform side-by-side regression analysis between baseline and target suite runs."""
     service = BenchmarkEngineService()
-    return await service.compare_runs(request=request, db=db)
+    return await service.compare_runs(request=request, db=db, user=current_user)
 
 
 @router.get(
@@ -166,7 +167,7 @@ async def get_benchmark_report(
 ) -> BenchmarkReportResponse:
     """Generate exportable, audit-ready markdown evaluation report for compliance and verification."""
     service = BenchmarkEngineService()
-    return await service.generate_report(run_id=run_id, db=db)
+    return await service.generate_report(run_id=run_id, db=db, user=current_user)
 
 
 @router.get(

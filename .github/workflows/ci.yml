@@ -1,0 +1,66 @@
+name: Devora AI CI / Deployment Verification
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  backend-test:
+    name: Backend Pytest & Migrations
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Verify Alembic Migrations Dry-Run (PostgreSQL DDL)
+        run: |
+          alembic upgrade head --sql
+
+      - name: Run Backend Regression Test Suite
+        env:
+          ENVIRONMENT: test
+          SECRET_KEY: ci-test-secret-key-minimum-32-characters-needed
+          DATABASE_URL: sqlite+aiosqlite:///:memory:
+          USE_MOCK_LLM: "true"
+          DEVORA_MOCK_GITHUB: "true"
+          DEVORA_SANDBOX_RUNNER: "local"
+        run: |
+          pytest backend/tests/ -q
+
+  frontend-build:
+    name: Frontend Next.js Production Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build Next.js Production Bundle
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: https://api.devora.ai
+          NEXT_TELEMETRY_DISABLED: 1
+        run: npm run build

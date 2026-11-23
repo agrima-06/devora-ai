@@ -43,7 +43,7 @@ import { adaptiveService } from "@/services/adaptive-service";
 import { flakyService } from "@/services/flaky-service";
 import { modelService } from "@/services/model-service";
 import { formatDate } from "@/lib/utils";
-import { getStoredToken } from "@/lib/api-client";
+import { getStoredToken, getApiBaseUrl } from "@/lib/api-client";
 import {
   AgentRun,
   FileChange,
@@ -192,7 +192,9 @@ export default function AgentWorkspacePage() {
 
     async function listenSSE() {
       try {
-        const response = await fetch(`/api/v1/tasks/${taskId}/events`, {
+        const baseUrl = getApiBaseUrl();
+        const sseUrl = baseUrl ? `${baseUrl}/api/v1/tasks/${taskId}/events` : `/api/v1/tasks/${taskId}/events`;
+        const response = await fetch(sseUrl, {
           headers: {
             Authorization: token ? `Bearer ${token}` : "",
           },
