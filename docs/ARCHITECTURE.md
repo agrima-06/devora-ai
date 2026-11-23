@@ -476,4 +476,60 @@ The testing engine operates via language-aware discovery, targeted test selectio
    - Workspace modifications and working tree edits made by `coder` are preserved during resumption (`preserve_existing=True`), preventing destructive overwrites.
    - Human approval is an inviolable gate: resuming at or after `security_reviewer` pauses at `WAITING_APPROVAL` with an `Approval` record created. No Git commits, branch pushes, or Pull Requests are created without explicit developer approval.
 
+---
+
+### 22. Autonomous Engineering Intelligence Evaluation & Benchmarking Engine (Phase 10 Stage 10.7)
+
+#### Subsystem Overview
+
+The **Autonomous Engineering Intelligence Evaluation & Benchmarking Engine** establishes a centralized, reproducible, and verifiable framework for empirically measuring the correctness, architectural understanding, reliability, safety, and efficiency of Devora AI and underlying LLMs.
+
+#### High-Level Architecture Flow
+
+```mermaid
+flowchart TD
+    DatasetRegistry["Canonical Benchmark Registry (31 Scenarios Across 7 Categories)"] --> SuiteRunner["Benchmark Engine Runner"]
+    SuiteRunner --> ModelGateway["Target Model Gateway (Gemini 1.5 Pro, Flash, Claude, GPT)"]
+    ModelGateway --> EvaluatorEngine["Multi-Type Evaluator (Exact, Structural, AST Delta, Test Assertion, Security)"]
+    EvaluatorEngine --> ScoringFormula["Weighted Scoring Formula (0-100 Score)"]
+    EvaluatorEngine --> SafetyOverride{"Critical Safety Violation?"}
+    SafetyOverride -- Yes --> SafetyBreach["Trigger Critical Safety Override (Score=0, Status=CRITICAL_SAFETY_FAILURE)"]
+    SafetyOverride -- No --> Calibration["Calculate Expected Calibration Error (ECE)"]
+    ScoringFormula --> SuiteRunRecord["Persist BenchmarkSuiteRun & ScenarioResults"]
+    Calibration --> SuiteRunRecord
+    SuiteRunRecord --> ComparisonEngine["Regression Detection Engine (vs Baseline)"]
+    ComparisonEngine --> AuditReport["Exportable Markdown Evaluation Report & Console UI"]
+```
+
+#### Core Architecture Components
+
+1. **Ground-Truth Dataset Registry (31 Canonical Scenarios):**
+   - **Category A (Bug Detection and Resolution):** 5 scenarios evaluating defect localization, null safety, off-by-one indexing, unawaited async coroutines, and race condition fixes.
+   - **Category B (Repository Understanding):** 5 scenarios evaluating inheritance hierarchy resolution, cross-file call graphs, framework entrypoint discovery, dynamic dispatch, and monorepo boundaries.
+   - **Category C (Architecture Intelligence):** 4 scenarios evaluating layered pattern inference, layer inversion drift detection, cyclic dependencies, and debt hotspot identification.
+   - **Category D (Change Impact Analysis):** 4 scenarios evaluating public API breaking changes, schema drift blast radius, multi-hop transitive dependencies, and test suite selection.
+   - **Category E (Autonomous Refactoring):** 5 scenarios evaluating monolithic function decomposition, shared utility extraction, layering remediation, behavioral preservation, and automated rollback.
+   - **Category F (Multi-Agent Workflow Quality):** 4 scenarios evaluating planner-coder handoffs, code reviewer finding fidelity, iterative test failure repair loops, and checkpoint resumption.
+   - **Category G (Security and Safety):** 4 scenarios evaluating parameterized SQL injection fixes, hardcoded credential redaction, multi-tenant isolation enforcement, and immutable approval diff-hash gates.
+
+2. **Multi-Type Scenario Evaluator:**
+   - `EXACT_MATCH`: Verifies ground-truth output field equality.
+   - `STRUCTURAL`: Evaluates presence of expected interfaces, symbol signatures, and topological relationships.
+   - `AST_DELTA`: Validates code transformation AST nodes against expected mutations.
+   - `TEST_ASSERTION`: Asserts behavioral preservation ($100\%$ baseline passing, zero newly failed tests).
+   - `SECURITY_POLICY`: Validates strict compliance with multi-tenant data isolation and security policies.
+
+3. **Empirical Weighted Scoring & Critical Safety Override:**
+   - Weighted scoring formula:
+     $$S_{\text{agg}} = 0.30 \cdot F_{\text{correct}} + 0.15 \cdot R_{\text{under}} + 0.15 \cdot A_{\text{intel}} + 0.15 \cdot S_{\text{refact}} + 0.15 \cdot S_{\text{sec}} + 0.05 \cdot O_{\text{rel}} + 0.05 \cdot E_{\text{eff}}$$
+   - **Safety Invariant:** If any Category G benchmark fails or an unauthorized approval/tenant violation occurs, the run status is immediately set to `CRITICAL_SAFETY_FAILURE` and the aggregate score collapses to `0.0`.
+
+4. **Expected Calibration Error (ECE):**
+   - Mathematical measurement of the confidence-to-accuracy alignment across evaluated tasks:
+     $$\text{ECE} = \frac{1}{N} \sum_{i=1}^N | c_i - a_i |$$
+
+5. **Historical Comparison & Regression Detection:**
+   - Detects score drops exceeding threshold ($\Delta \le -5.0$ pts) or safety regressions.
+   - Automatically classifies regressions into `CRITICAL`, `HIGH`, `MEDIUM`, and `LOW` severities with regression types (`ACCURACY_DROP`, `LATENCY_SPIKE`, `SAFETY_BREACH`, `INVARIANT_FAILURE`).
+
 

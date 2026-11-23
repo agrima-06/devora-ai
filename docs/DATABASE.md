@@ -711,7 +711,332 @@ CREATE INDEX idx_workflow_checkpoints_task ON workflow_checkpoints(task_id);
 CREATE INDEX idx_workflow_checkpoints_thread ON workflow_checkpoints(thread_id);
 CREATE INDEX idx_workflow_checkpoints_node ON workflow_checkpoints(node_name);
 CREATE INDEX idx_workflow_checkpoints_step ON workflow_checkpoints(task_id, step_number DESC);
+
+-- 26. Model Gateway Health Table (Phase 9 Stage 9.5)
+CREATE TABLE model_gateway_health (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    provider_name VARCHAR(50) NOT NULL,
+    model_name VARCHAR(100) NOT NULL,
+    circuit_state VARCHAR(20) NOT NULL DEFAULT 'CLOSED',
+    consecutive_failures INTEGER NOT NULL DEFAULT 0,
+    consecutive_successes INTEGER NOT NULL DEFAULT 0,
+    total_calls INTEGER NOT NULL DEFAULT 0,
+    total_failures INTEGER NOT NULL DEFAULT 0,
+    total_retries INTEGER NOT NULL DEFAULT 0,
+    total_fallbacks INTEGER NOT NULL DEFAULT 0,
+    average_latency_ms FLOAT NOT NULL DEFAULT 0.0,
+    last_failure_reason TEXT,
+    last_failure_classification VARCHAR(50),
+    last_failure_at TIMESTAMPTZ,
+    last_success_at TIMESTAMPTZ,
+    last_state_change_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_provider_model_health UNIQUE (provider_name, model_name)
+);
+
+CREATE INDEX ix_model_gateway_health_provider_name ON model_gateway_health(provider_name);
+CREATE INDEX ix_model_gateway_health_model_name ON model_gateway_health(model_name);
+CREATE INDEX ix_model_gateway_health_circuit_state ON model_gateway_health(circuit_state);
+
+-- 27. Repository Graph Nodes Table (Phase 10 Stage 10.1)
+CREATE TABLE repository_graph_nodes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    repository_id UUID NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+    node_type VARCHAR(32) NOT NULL,
+    qualified_name VARCHAR(512) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    file_path VARCHAR(1024),
+    language VARCHAR(64),
+    start_line INTEGER,
+    end_line INTEGER,
+    start_col INTEGER,
+    end_col INTEGER,
+    content_hash VARCHAR(64),
+    docstring TEXT,
+    meta_info JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_repo_graph_nodes_qname UNIQUE (repository_id, qualified_name)
+);
+
+CREATE INDEX ix_repo_graph_nodes_repo_id ON repository_graph_nodes(repository_id);
+CREATE INDEX ix_repo_graph_nodes_type ON repository_graph_nodes(repository_id, node_type);
+CREATE INDEX ix_repo_graph_nodes_filepath ON repository_graph_nodes(repository_id, file_path);
+
+-- 28. Repository Graph Edges Table (Phase 10 Stage 10.1)
+CREATE TABLE repository_graph_edges (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    repository_id UUID NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+    source_node_id UUID NOT NULL REFERENCES repository_graph_nodes(id) ON DELETE CASCADE,
+    target_node_id UUID REFERENCES repository_graph_nodes(id) ON DELETE SET NULL,
+    edge_type VARCHAR(32) NOT NULL,
+    confidence FLOAT NOT NULL DEFAULT 1.0,
+    resolution_status VARCHAR(32) NOT NULL DEFAULT 'RESOLVED',
+    target_symbol VARCHAR(512),
+    line_number INTEGER,
+    meta_info JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX ix_repo_graph_edges_repo_id ON repository_graph_edges(repository_id);
+CREATE INDEX ix_repo_graph_edges_source ON repository_graph_edges(source_node_id);
+CREATE INDEX ix_repo_graph_edges_target ON repository_graph_edges(target_node_id);
+CREATE INDEX ix_repo_graph_edges_type ON repository_graph_edges(edge_type);
+CREATE INDEX ix_repo_graph_edges_resolution ON repository_graph_edges(resolution_status);
+
+-- 29. Repository Architecture Patterns Table (Phase 10 Stage 10.4)
+CREATE TABLE repository_architecture_patterns (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    repository_id UUID NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+    pattern_id VARCHAR(100) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    evidence_status VARCHAR(50) NOT NULL,
+    confidence_score FLOAT NOT NULL,
+    supporting_files JSONB NOT NULL DEFAULT '[]'::jsonb,
+    supporting_symbols JSONB NOT NULL DEFAULT '[]'::jsonb,
+    supporting_relationships JSONB NOT NULL DEFAULT '[]'::jsonb,
+    supporting_config JSONB NOT NULL DEFAULT '{}'::jsonb,
+    counterexamples JSONB NOT NULL DEFAULT '[]'::jsonb,
+    conventions JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_repo_pattern_slug UNIQUE (repository_id, pattern_id)
+);
+
+CREATE INDEX ix_repo_arch_patterns_repo_id ON repository_architecture_patterns(repository_id);
+CREATE INDEX ix_repo_arch_patterns_category ON repository_architecture_patterns(repository_id, category);
+CREATE INDEX ix_repo_arch_patterns_status ON repository_architecture_patterns(repository_id, evidence_status);
+CREATE INDEX ix_repo_arch_patterns_confidence ON repository_architecture_patterns(confidence_score);
+
+-- 30. Repository Architecture Drift Table (Phase 10 Stage 10.5)
+CREATE TABLE repository_architecture_drift (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    repository_id UUID NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+    commit_sha VARCHAR(100),
+    baseline_commit_sha VARCHAR(100),
+    drift_status VARCHAR(50) NOT NULL,
+    total_violations INTEGER NOT NULL DEFAULT 0,
+    critical_violations INTEGER NOT NULL DEFAULT 0,
+    high_violations INTEGER NOT NULL DEFAULT 0,
+    medium_violations INTEGER NOT NULL DEFAULT 0,
+    low_violations INTEGER NOT NULL DEFAULT 0,
+    violations JSONB NOT NULL DEFAULT '[]'::jsonb,
+    resolved_violations JSONB NOT NULL DEFAULT '[]'::jsonb,
+    summary JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX ix_repo_arch_drift_repo_id ON repository_architecture_drift(repository_id);
+CREATE INDEX ix_repo_arch_drift_created_at ON repository_architecture_drift(created_at);
+CREATE INDEX ix_repo_arch_drift_status ON repository_architecture_drift(repository_id, drift_status);
+
+-- 31. Repository Technical Debt Table (Phase 10 Stage 10.5)
+CREATE TABLE repository_technical_debt (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    repository_id UUID NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+    commit_sha VARCHAR(100),
+    overall_debt_score FLOAT NOT NULL,
+    severity VARCHAR(50) NOT NULL,
+    confidence FLOAT NOT NULL DEFAULT 0.0,
+    complexity_score FLOAT NOT NULL DEFAULT 0.0,
+    duplication_score FLOAT NOT NULL DEFAULT 0.0,
+    dependency_score FLOAT NOT NULL DEFAULT 0.0,
+    architecture_drift_score FLOAT NOT NULL DEFAULT 0.0,
+    test_debt_score FLOAT NOT NULL DEFAULT 0.0,
+    maintainability_score FLOAT NOT NULL DEFAULT 0.0,
+    findings JSONB NOT NULL DEFAULT '[]'::jsonb,
+    summary_metrics JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX ix_repo_tech_debt_repo_id ON repository_technical_debt(repository_id);
+CREATE INDEX ix_repo_tech_debt_created_at ON repository_technical_debt(created_at);
+CREATE INDEX ix_repo_tech_debt_severity ON repository_technical_debt(repository_id, severity);
+CREATE INDEX ix_repo_tech_debt_score ON repository_technical_debt(overall_debt_score);
+
+-- 32. Repository Refactoring Plans Table (Phase 10 Stage 10.6)
+CREATE TABLE repository_refactoring_plans (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    repository_id UUID NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+    source_revision VARCHAR(100),
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    category VARCHAR(50) NOT NULL,
+    risk_level VARCHAR(20) NOT NULL DEFAULT 'LOW',
+    risk_score FLOAT NOT NULL DEFAULT 0.0,
+    confidence FLOAT NOT NULL DEFAULT 0.0,
+    requires_human_approval BOOLEAN NOT NULL DEFAULT FALSE,
+    approval_status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    approved_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    approved_at TIMESTAMPTZ,
+    approved_diff_hash VARCHAR(64),
+    execution_status VARCHAR(50) NOT NULL DEFAULT 'DRAFT',
+    target_files JSONB NOT NULL DEFAULT '[]'::jsonb,
+    target_symbols JSONB NOT NULL DEFAULT '[]'::jsonb,
+    finding_ids JSONB NOT NULL DEFAULT '[]'::jsonb,
+    affected_packages JSONB NOT NULL DEFAULT '[]'::jsonb,
+    ordered_steps JSONB NOT NULL DEFAULT '[]'::jsonb,
+    recommended_tests JSONB NOT NULL DEFAULT '[]'::jsonb,
+    expected_outcomes JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX ix_refactor_plans_repo_id ON repository_refactoring_plans(repository_id);
+CREATE INDEX ix_refactor_plans_created_at ON repository_refactoring_plans(created_at);
+CREATE INDEX ix_refactor_plans_approval ON repository_refactoring_plans(repository_id, approval_status);
+CREATE INDEX ix_refactor_plans_category ON repository_refactoring_plans(repository_id, category);
+
+-- 33. Refactoring Executions Table (Phase 10 Stage 10.6)
+CREATE TABLE refactoring_executions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    plan_id UUID NOT NULL REFERENCES repository_refactoring_plans(id) ON DELETE CASCADE,
+    repository_id UUID NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    source_commit_sha VARCHAR(100) NOT NULL,
+    target_branch VARCHAR(255) NOT NULL,
+    diff_content TEXT,
+    diff_hash VARCHAR(64),
+    files_changed_count INTEGER NOT NULL DEFAULT 0,
+    lines_added INTEGER NOT NULL DEFAULT 0,
+    lines_removed INTEGER NOT NULL DEFAULT 0,
+    baseline_tests_passed BOOLEAN NOT NULL DEFAULT TRUE,
+    post_tests_passed BOOLEAN NOT NULL DEFAULT TRUE,
+    tests_executed JSONB NOT NULL DEFAULT '[]'::jsonb,
+    before_metrics JSONB NOT NULL DEFAULT '{}'::jsonb,
+    after_metrics JSONB NOT NULL DEFAULT '{}'::jsonb,
+    new_violations_detected JSONB NOT NULL DEFAULT '[]'::jsonb,
+    rollback_occurred BOOLEAN NOT NULL DEFAULT FALSE,
+    rollback_reason TEXT,
+    error_message TEXT,
+    completed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX ix_refactor_exec_plan_id ON refactoring_executions(plan_id);
+CREATE INDEX ix_refactor_exec_repo_id ON refactoring_executions(repository_id);
+CREATE INDEX ix_refactor_exec_status ON refactoring_executions(repository_id, status);
+CREATE INDEX ix_refactor_exec_created_at ON refactoring_executions(created_at);
+
+-- 34. Benchmark Scenarios Table (Phase 10 Stage 10.7)
+CREATE TABLE benchmark_scenarios (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    scenario_key VARCHAR(100) UNIQUE NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    difficulty VARCHAR(50) NOT NULL DEFAULT 'MEDIUM',
+    eval_type VARCHAR(50) NOT NULL DEFAULT 'EXACT_MATCH',
+    input_context JSONB NOT NULL DEFAULT '{}'::jsonb,
+    expected_output JSONB NOT NULL DEFAULT '{}'::jsonb,
+    evaluation_criteria JSONB NOT NULL DEFAULT '{}'::jsonb,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    version INTEGER NOT NULL DEFAULT 1,
+    tags JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX ix_benchmark_scenarios_key ON benchmark_scenarios(scenario_key);
+CREATE INDEX ix_benchmark_scenarios_category ON benchmark_scenarios(category);
+CREATE INDEX ix_benchmark_scenarios_active ON benchmark_scenarios(is_active);
+
+-- 35. Benchmark Suite Runs Table (Phase 10 Stage 10.7)
+CREATE TABLE benchmark_suite_runs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    suite_name VARCHAR(100) NOT NULL DEFAULT 'devora_core_intelligence_suite',
+    model_name VARCHAR(100) NOT NULL,
+    code_revision VARCHAR(100),
+    dataset_version VARCHAR(50) NOT NULL DEFAULT 'v1.0',
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    total_scenarios INTEGER NOT NULL DEFAULT 0,
+    passed_scenarios INTEGER NOT NULL DEFAULT 0,
+    failed_scenarios INTEGER NOT NULL DEFAULT 0,
+    critical_safety_failure BOOLEAN NOT NULL DEFAULT FALSE,
+    aggregate_score FLOAT NOT NULL DEFAULT 0.0,
+    category_scores JSONB NOT NULL DEFAULT '{}'::jsonb,
+    calibration_error FLOAT NOT NULL DEFAULT 0.0,
+    latency_p50_ms FLOAT NOT NULL DEFAULT 0.0,
+    latency_p95_ms FLOAT NOT NULL DEFAULT 0.0,
+    token_usage_total INTEGER NOT NULL DEFAULT 0,
+    cost_estimate_usd FLOAT NOT NULL DEFAULT 0.0,
+    triggered_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMPTZ
+);
+
+CREATE INDEX ix_benchmark_suite_runs_suite ON benchmark_suite_runs(suite_name);
+CREATE INDEX ix_benchmark_suite_runs_model ON benchmark_suite_runs(model_name);
+CREATE INDEX ix_benchmark_suite_runs_status ON benchmark_suite_runs(status);
+CREATE INDEX ix_benchmark_suite_runs_safety ON benchmark_suite_runs(critical_safety_failure);
+
+-- 36. Benchmark Scenario Results Table (Phase 10 Stage 10.7)
+CREATE TABLE benchmark_scenario_results (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    run_id UUID NOT NULL REFERENCES benchmark_suite_runs(id) ON DELETE CASCADE,
+    scenario_id UUID NOT NULL REFERENCES benchmark_scenarios(id) ON DELETE CASCADE,
+    scenario_key VARCHAR(100) NOT NULL DEFAULT '',
+    category VARCHAR(50) NOT NULL DEFAULT '',
+    name VARCHAR(255) NOT NULL DEFAULT '',
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+    score FLOAT NOT NULL DEFAULT 0.0,
+    actual_output JSONB NOT NULL DEFAULT '{}'::jsonb,
+    expected_output JSONB NOT NULL DEFAULT '{}'::jsonb,
+    diff_summary TEXT,
+    execution_time_ms FLOAT NOT NULL DEFAULT 0.0,
+    tokens_used INTEGER NOT NULL DEFAULT 0,
+    confidence_score FLOAT,
+    invariants_met BOOLEAN NOT NULL DEFAULT TRUE,
+    safety_violated BOOLEAN NOT NULL DEFAULT FALSE,
+    failure_reason TEXT,
+    evidence JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX ix_benchmark_results_run_id ON benchmark_scenario_results(run_id);
+CREATE INDEX ix_benchmark_results_scenario_id ON benchmark_scenario_results(scenario_id);
+CREATE INDEX ix_benchmark_results_safety ON benchmark_scenario_results(safety_violated);
+
+-- 37. Benchmark Regressions Table (Phase 10 Stage 10.7)
+CREATE TABLE benchmark_regressions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    baseline_run_id UUID NOT NULL REFERENCES benchmark_suite_runs(id) ON DELETE CASCADE,
+    target_run_id UUID NOT NULL REFERENCES benchmark_suite_runs(id) ON DELETE CASCADE,
+    scenario_id UUID NOT NULL REFERENCES benchmark_scenarios(id) ON DELETE CASCADE,
+    scenario_key VARCHAR(100) NOT NULL DEFAULT '',
+    category VARCHAR(50) NOT NULL,
+    severity VARCHAR(50) NOT NULL,
+    baseline_score FLOAT NOT NULL,
+    target_score FLOAT NOT NULL,
+    score_delta FLOAT NOT NULL,
+    percentage_change FLOAT NOT NULL,
+    description TEXT NOT NULL,
+    regression_type VARCHAR(50) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX ix_benchmark_regressions_base_run ON benchmark_regressions(baseline_run_id);
+CREATE INDEX ix_benchmark_regressions_tgt_run ON benchmark_regressions(target_run_id);
+CREATE INDEX ix_benchmark_regressions_scenario ON benchmark_regressions(scenario_id);
+CREATE INDEX ix_benchmark_regressions_category ON benchmark_regressions(category);
+CREATE INDEX ix_benchmark_regressions_severity ON benchmark_regressions(severity);
 ```
+
+### Migration History (Phase 10 Stage 10.7)
+- `012_repository_dependency_graph`: Nodes and edges schema.
+- `013_architecture_patterns`: Repository architecture patterns table with composite indices.
+- `014_arch_drift_tech_debt`: Schema definitions for `repository_architecture_drift` (Table 30) and `repository_technical_debt` (Table 31). Note: The Alembic revision identifier is capped to $\le 32$ characters (`014_arch_drift_tech_debt`) per PostgreSQL `VARCHAR(32)` table definition for `alembic_version.version_num`.
+- `015_refactoring_engine`: Schema definitions for `repository_refactoring_plans` (Table 32) and `refactoring_executions` (Table 33). Alembic revision string `015_refactoring_engine` (22 characters) is safely compliant with PostgreSQL `VARCHAR(32)` constraints.
+- `016_benchmark_engine`: Schema definitions for `benchmark_scenarios` (Table 34), `benchmark_suite_runs` (Table 35), `benchmark_scenario_results` (Table 36), and `benchmark_regressions` (Table 37). Revision string `016_benchmark_engine` (22 characters) is safely compliant with PostgreSQL `VARCHAR(32)` constraints.
 
 ---
 

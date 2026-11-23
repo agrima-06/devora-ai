@@ -6,13 +6,17 @@ from app.core.exceptions import DevoraException
 API_KEY_REGEX = re.compile(r"AIza[0-9A-Za-z-_]{30,45}")
 TOKEN_REGEX = re.compile(r"x-access-token:[a-zA-Z0-9_\-]+@")
 BEARER_REGEX = re.compile(r"Bearer\s+[a-zA-Z0-9_\-\.]{20,}")
+GHP_REGEX = re.compile(r"ghp_[a-zA-Z0-9]{36}")
+GITHUB_PAT_REGEX = re.compile(r"github_pat_[a-zA-Z0-9_]{30,100}")
 
 
 def scrub_credentials(text: str) -> str:
-    """Scrub API keys and bearer tokens from error strings."""
+    """Scrub API keys, GitHub tokens, and bearer tokens from error strings."""
     if not text:
         return ""
     sanitized = API_KEY_REGEX.sub("[REDACTED_API_KEY]", str(text))
+    sanitized = GHP_REGEX.sub("[REDACTED_TOKEN]", sanitized)
+    sanitized = GITHUB_PAT_REGEX.sub("[REDACTED_TOKEN]", sanitized)
     sanitized = TOKEN_REGEX.sub("x-access-token:[REDACTED]@", sanitized)
     sanitized = BEARER_REGEX.sub("Bearer [REDACTED]", sanitized)
     return sanitized

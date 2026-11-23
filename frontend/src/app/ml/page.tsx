@@ -54,7 +54,7 @@ export default function MLIntelligencePage() {
   // Playground state
   const [testErrorMessage, setTestErrorMessage] = useState("");
   const [testTraceback, setTestTraceback] = useState(
-    `Traceback (most recent call last):\n  File "/workspace/app/db/session.py", line 55, in get_session\n    conn = await asyncpg.connect("postgresql://postgres:secret@localhost:5432/devora")\nasyncpg.exceptions.CannotConnectNowError: connection to server on socket failed: Connection refused`
+    `Traceback (most recent call last):\n  File "/workspace/app/db/session.py", line 55, in get_session\n    conn = await asyncpg.connect("postgresql://postgres@localhost:5432/devora")\nasyncpg.exceptions.CannotConnectNowError: connection to server on socket failed: Connection refused`
   );
   const [playgroundResult, setPlaygroundResult] = useState<PredictionResult | null>(null);
 

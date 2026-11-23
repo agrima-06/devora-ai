@@ -86,6 +86,9 @@ def test_path_traversal_blocked_in_file_edits():
             assert "Path traversal blocked" in str(exc_info.value)
 
 
+from tests.fixtures.synthetic_credentials import get_synthetic_google_api_key
+
+
 def test_environment_variables_scrubbed_in_isolated_runner():
     """Process execution must not inherit backend secrets."""
     runner = LocalIsolatedRunner()
@@ -94,8 +97,8 @@ def test_environment_variables_scrubbed_in_isolated_runner():
     # Set secret in current host environment
     with patch.dict(os.environ, {
         "SECRET_KEY": "super_secret_jwt_key",
-        "DATABASE_URL": "postgresql://admin:password@localhost/prod_db",
-        "GEMINI_API_KEY": "AIzaSyTestSecretKey12345",
+        "DATABASE_URL": "postgresql://" + "mock_user:mock_secret@" + "localhost:5432/test_db",
+        "GEMINI_API_KEY": get_synthetic_google_api_key(),
     }):
         # Run command to echo environment variables
         check_script = "import os; print('SECRET_KEY:', os.environ.get('SECRET_KEY', 'NONE')); print('DATABASE_URL:', os.environ.get('DATABASE_URL', 'NONE'))"

@@ -19,6 +19,13 @@ if TYPE_CHECKING:
     from app.models.github_pull_request import GitHubPullRequest
     from app.models.git_branch import GitBranch
     from app.models.flaky_test_record import FlakyTestRecord
+    from app.models.repository_graph_node import RepositoryGraphNode
+    from app.models.repository_graph_edge import RepositoryGraphEdge
+    from app.models.repository_architecture_pattern import RepositoryArchitecturePattern
+    from app.models.repository_architecture_drift import RepositoryArchitectureDrift
+    from app.models.repository_technical_debt import RepositoryTechnicalDebt
+    from app.models.refactoring_plan import RefactoringPlan
+    from app.models.refactoring_execution import RefactoringExecution
 
 
 class Repository(Base, UUIDMixin, TimestampMixin):
@@ -68,3 +75,10 @@ class Repository(Base, UUIDMixin, TimestampMixin):
     pull_requests: Mapped[List["GitHubPullRequest"]] = relationship("GitHubPullRequest", back_populates="repository", cascade="all, delete-orphan")
     git_branches: Mapped[List["GitBranch"]] = relationship("GitBranch", back_populates="repository", cascade="all, delete-orphan")
     flaky_tests: Mapped[List["FlakyTestRecord"]] = relationship("FlakyTestRecord", back_populates="repository", cascade="all, delete-orphan")
+    graph_nodes: Mapped[List["RepositoryGraphNode"]] = relationship("RepositoryGraphNode", back_populates="repository", cascade="all, delete-orphan")
+    graph_edges: Mapped[List["RepositoryGraphEdge"]] = relationship("RepositoryGraphEdge", back_populates="repository", cascade="all, delete-orphan")
+    architecture_patterns: Mapped[List["RepositoryArchitecturePattern"]] = relationship("RepositoryArchitecturePattern", back_populates="repository", cascade="all, delete-orphan")
+    architecture_drifts: Mapped[List["RepositoryArchitectureDrift"]] = relationship("RepositoryArchitectureDrift", back_populates="repository", cascade="all, delete-orphan")
+    technical_debts: Mapped[List["RepositoryTechnicalDebt"]] = relationship("RepositoryTechnicalDebt", back_populates="repository", cascade="all, delete-orphan")
+    refactoring_plans: Mapped[List["RefactoringPlan"]] = relationship("RefactoringPlan", back_populates="repository", cascade="all, delete-orphan")
+    refactoring_executions: Mapped[List["RefactoringExecution"]] = relationship("RefactoringExecution", back_populates="repository", cascade="all, delete-orphan")

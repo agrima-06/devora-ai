@@ -7,6 +7,7 @@ import pytest
 from pydantic import BaseModel, Field
 
 from app.agents.gateway.gemini import GeminiProvider, LLMGenerationError
+from tests.fixtures.synthetic_credentials import get_synthetic_google_api_key
 
 
 class SampleAuditSchema(BaseModel):
@@ -18,7 +19,7 @@ class SampleAuditSchema(BaseModel):
 @pytest.mark.asyncio
 async def test_gemini_provider_structured_parsing_and_schema_validation():
     """GeminiProvider must parse valid JSON conforming to Pydantic model."""
-    provider = GeminiProvider(api_key="AIzaSyDummyKeyForTestingPurposes12345", max_retries=2)
+    provider = GeminiProvider(api_key=get_synthetic_google_api_key(), max_retries=2)
 
     mock_response = MagicMock()
     mock_response.text = json.dumps({
@@ -46,7 +47,7 @@ async def test_gemini_provider_structured_parsing_and_schema_validation():
 @pytest.mark.asyncio
 async def test_gemini_provider_malformed_response_retries_and_recovers():
     """Malformed JSON should trigger retry with backoff and succeed if subsequent attempt returns valid JSON."""
-    provider = GeminiProvider(api_key="AIzaSyDummyKeyForTestingPurposes12345", max_retries=3)
+    provider = GeminiProvider(api_key=get_synthetic_google_api_key(), max_retries=3)
 
     malformed_response = MagicMock()
     malformed_response.text = "NOT_JSON { invalid json string"
@@ -73,7 +74,7 @@ async def test_gemini_provider_malformed_response_retries_and_recovers():
 @pytest.mark.asyncio
 async def test_gemini_provider_exhausted_retries_raises_llm_error():
     """Persistent failures must exhaust retries and raise LLMGenerationError."""
-    provider = GeminiProvider(api_key="AIzaSyDummyKeyForTestingPurposes12345", max_retries=2)
+    provider = GeminiProvider(api_key=get_synthetic_google_api_key(), max_retries=2)
 
     with patch.object(provider.client.aio.models, "generate_content", new_callable=AsyncMock) as mock_gen:
         mock_gen.side_effect = Exception("503 Service Unavailable")
@@ -88,7 +89,7 @@ async def test_gemini_provider_exhausted_retries_raises_llm_error():
 @pytest.mark.asyncio
 async def test_gemini_provider_credentials_never_appear_in_exceptions():
     """API key secret must never leak in error messages or logs."""
-    secret_key = "AIzaSySuperSecretKeyNeverToLeak12345"
+    secret_key = get_synthetic_google_api_key()
     provider = GeminiProvider(api_key=secret_key, max_retries=1)
 
     with patch.object(provider.client.aio.models, "generate_content", new_callable=AsyncMock) as mock_gen:

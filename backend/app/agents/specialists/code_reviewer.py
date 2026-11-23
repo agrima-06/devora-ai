@@ -34,11 +34,56 @@ async def code_reviewer_node(state: DevoraWorkflowState) -> Dict[str, Any]:
     git_diff = state.get("git_diff", "")
     applied_files = [f.get("file_path", "") for f in state.get("applied_file_changes", [])]
     test_results = state.get("test_results") or {}
+    impact = state.get("impact_analysis") or {}
+
+    impact_context = ""
+    if impact:
+        impact_context = (
+            f"\nPredicted Blast Radius: Severity {impact.get('severity', 'UNKNOWN')} "
+            f"(Score {impact.get('impact_score', 0)}/100). "
+            f"Downstream Affected Files: {impact.get('affected_files', [])[:5]}.\n"
+            f"Ensure code changes do not inadvertently break downstream consumer interfaces.\n"
+        )
+
+    # Architectural conventions context
+    arch_conventions = state.get("architecture_conventions") or []
+    conv_context = ""
+    if arch_conventions:
+        conv_items = [
+            f"- {c.get('name')}: {c.get('description')}"
+            for c in arch_conventions[:4]
+            if isinstance(c, dict) and c.get("name")
+        ]
+        if conv_items:
+            conv_context = "\nEnforced Repository Conventions:\n" + "\n".join(conv_items) + "\nVerify diff conforms to these architectural conventions.\n"
+
+    # Architecture drift & debt context
+    drift = state.get("architecture_drift") or {}
+    drift_context = ""
+    if drift and drift.get("drift_status") != "HEALTHY":
+        drift_context = f"\nActive Architecture Drift: {drift.get('drift_status')} ({drift.get('total_violations', 0)} violations). Ensure diff does not introduce new layering, cycle, or boundary violations.\n"
+
+    # Refactoring Scope & Semantics Verification (Stage 10.6)
+    refactoring_plan = state.get("refactoring_plan") or {}
+    refact_context = ""
+    if refactoring_plan:
+        allowed_files = set(refactoring_plan.get("target_files", []))
+        out_of_scope = [f for f in applied_files if f and f not in allowed_files]
+        scope_warning = f" WARNING: Edits detected outside planned scope: {out_of_scope}." if out_of_scope else " All edits within planned target files."
+        refact_context = (
+            f"\nApproved Refactoring Plan: {refactoring_plan.get('name', 'Refactoring')} ({refactoring_plan.get('category', 'GENERAL')}).\n"
+            f"Planned Target Files: {list(allowed_files)}.{scope_warning}\n"
+            f"Verify that refactored code preserves behavioral semantics, adheres to approved steps, and introduces no extraneous edits.\n"
+        )
 
     prompt = (
         f"Task Description: {task_desc}\n"
         f"Modified Files: {applied_files}\n"
-        f"Test Run Passed: {test_results.get('passed', False)}\n\n"
+        f"Test Run Passed: {test_results.get('passed', False)}\n"
+        f"{impact_context}"
+        f"{conv_context}"
+        f"{drift_context}"
+        f"{refact_context}\n"
         f"Unified Git Diff:\n```diff\n{git_diff[:4000]}\n```\n\n"
         f"Review these code changes and provide structured review feedback."
     )

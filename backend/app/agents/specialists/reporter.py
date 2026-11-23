@@ -44,6 +44,24 @@ async def reporter_node(state: DevoraWorkflowState) -> Dict[str, Any]:
     review = state.get("review_results") or {}
     security = state.get("security_results") or {}
     retries = state.get("retry_count", 0)
+    impact = state.get("impact_analysis") or {}
+    impact_summary = f"Severity: {impact.get('severity', 'N/A')}, Score: {impact.get('impact_score', 0)}/100, Affected Files: {len(impact.get('affected_files', []))}" if impact else "None"
+
+    drift = state.get("architecture_drift") or {}
+    tech_debt = state.get("technical_debt") or {}
+    debt_info = f"Drift: {drift.get('drift_status', 'HEALTHY')}, Debt Score: {tech_debt.get('overall_debt_score', 0)}/100" if (drift or tech_debt) else "Healthy"
+
+    # Refactoring Execution Telemetry (Stage 10.6)
+    refactoring_plan = state.get("refactoring_plan") or {}
+    refactoring_exec = state.get("refactoring_execution") or {}
+    refact_info = ""
+    if refactoring_plan or refactoring_exec:
+        refact_info = (
+            f"Refactoring Operation: {refactoring_plan.get('name', 'N/A')} ({refactoring_plan.get('category', 'GENERAL')}), "
+            f"Plan Status: {refactoring_plan.get('status', 'N/A')}, "
+            f"Execution Success: {refactoring_exec.get('is_success', 'N/A')}, "
+            f"Preserved Semantics: {refactoring_exec.get('preserved_semantics', True)}"
+        )
 
     prompt = (
         f"Task Description: {task_desc}\n"
@@ -53,6 +71,9 @@ async def reporter_node(state: DevoraWorkflowState) -> Dict[str, Any]:
         f"Root Cause: {root_cause.get('root_cause', 'N/A')}\n"
         f"Plan Objective: {plan.get('objective', 'N/A')}\n"
         f"Modified Files: {applied_files}\n"
+        f"Blast Radius Impact: {impact_summary}\n"
+        f"Architecture & Technical Debt Posture: {debt_info}\n"
+        f"Refactoring Operation & Behavioral Preservation: {refact_info if refact_info else 'N/A'}\n"
         f"Diff Size: {len(git_diff)} bytes\n"
         f"Test Results: passed={test_results.get('passed', False)}, "
         f"passed_count={test_results.get('passed_tests', 0)}, "

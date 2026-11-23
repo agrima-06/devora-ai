@@ -764,7 +764,7 @@ SEED_DATA: List[Dict[str, str]] = [
     {
         "category": BugCategory.DATABASE_NETWORK_ERROR.value,
         "error_message": "asyncpg.exceptions.CannotConnectNowError: connection to server on socket failed: Connection refused",
-        "traceback": 'Traceback (most recent call last):\n  File "/workspace/app/db/session.py", line 55, in get_session\n    conn = await asyncpg.connect("postgresql://postgres:secret@localhost:5432/devora")\nasyncpg.exceptions.CannotConnectNowError: connection to server on socket "/tmp/.s.PGSQL.5432" failed: Connection refused',
+        "traceback": 'Traceback (most recent call last):\n  File "/workspace/app/db/session.py", line 55, in get_session\n    conn = await asyncpg.connect("postgresql://postgres@localhost:5432/devora")\nasyncpg.exceptions.CannotConnectNowError: connection to server on socket "/tmp/.s.PGSQL.5432" failed: Connection refused',
         "context": "PostgreSQL service daemon is not running or listening on target port",
     },
     {

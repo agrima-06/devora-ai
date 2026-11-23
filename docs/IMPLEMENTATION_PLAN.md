@@ -251,8 +251,259 @@ graph TD
     - Authored 14 unit tests (`test_workflow_recovery.py`) and 4 integration tests (`test_workflow_recovery_e2e.py`).
   - **Verification:** 228 backend tests passed (0 regressions, 3 skipped); Next.js 15/15 routes compiled with 0 errors.
 
-* **Stage 9.5: Model Gateway Circuit Breaker [UPCOMING]**
-* **Stage 9.6: Reliability Observability Console [UPCOMING]**
+* **Stage 9.5: Model Gateway Circuit Breaker & Fallback Resilience [COMPLETED]**
+  - **Summary:** Centralized circuit breaker engine, exponential jittered backoff retries, capability-aware provider/model fallback, 15-class failure taxonomy, PostgreSQL persistence, authenticated REST endpoints, and frontend observability card in the Task Workspace.
+  - **Key Artifacts:**
+    - Implemented `CircuitBreaker`, `CircuitState` (`CLOSED`, `OPEN`, `HALF_OPEN`), and `CircuitBreakerRegistry` with thread-safe sliding window tracking in `circuit_breaker.py`.
+    - Defined 15-class standardized exception hierarchy and credential sanitization engine (`scrub_credentials`) in `exceptions.py`.
+    - Refactored `ModelGateway` with `_execute_with_resilience`, centralizing retries, rate-limiting backoff (`retry_after`), model fallback chain, cumulative token tracking, and real-time SSE event emission (`MODEL_RETRY_STARTED`, `MODEL_FALLBACK_STARTED`, `MODEL_FALLBACK_SUCCEEDED`, `MODEL_PROVIDER_UNAVAILABLE`).
+    - Created `ModelGatewayHealth` SQLAlchemy model and applied Alembic migration `011_model_gateway_resilience.py` to PostgreSQL.
+    - Implemented `ModelHealthService` for asynchronous metrics synchronization to PostgreSQL and manual circuit breaker resets.
+    - Exposed REST API endpoints: `GET /api/v1/models/health`, `POST /api/v1/models/breakers/{provider}/{model}/reset`, and `POST /api/v1/models/reset-all`.
+    - Integrated fault-isolation in `WorkflowService`: model provider failures mark task `FAILED` with `recovery_status = "INTERRUPTED"`, preserving checkpoints for Stage 9.4 resumption without causing code churn loops.
+    - Integrated frontend Model Gateway Resilience card into `/tasks/[id]`, displaying live circuit states, active/fallback models, retries, and manual reset buttons.
+    - Authored 8 unit tests in `test_circuit_breaker.py`, 7 unit tests in `test_model_gateway_resilience.py`, and 3 integration tests in `test_model_gateway_e2e.py`.
+  - **Verification:** 249 backend tests passed (100% pass rate, 0 regressions); Next.js 15/15 routes compiled with 0 errors.
+
+* **Stage 9.6: Reliability Observability Console [COMPLETED]**
+  - **Scope:** Single-pane operational console connecting workflow state machine, Docker sandbox execution, multi-language testing, flaky test detection, workflow recovery, and Model Gateway resilience.
+  - **Artifacts:**
+    - Schemas: `backend/app/schemas/reliability.py` (`SubsystemHealth`, `WorkflowReliabilitySummary`, `SandboxReliabilitySummary`, `TestStabilitySummary`, `ModelGatewayReliabilitySummary`, `RecoveryOperationsSummary`, `ReliabilityOverviewResponse`, `ReliabilityEventItem`, `ReliabilityEventsResponse`, `ReliabilityTrendBucket`, `ReliabilityTrendsResponse`).
+    - Service: `backend/app/services/reliability_service.py` (`ReliabilityService`) with verified subsystem health diagnostics, multi-filter event timeline, time-series trends, and credential redaction.
+    - Endpoints: `backend/app/api/v1/reliability.py` (`GET /overview`, `GET /events`, `GET /trends`).
+    - Distributed-State Audit: Documented process-local circuit breaker isolation with PostgreSQL DB sync (`multi_worker_shared_state: False`, `deployment_topology: "PROCESS_LOCAL_WITH_DB_SYNC"`).
+    - Workflow State Consistency: Resumptions strictly invoke `POST /api/v1/tasks/{id}/resume`, enforcing terminal-state immutability and approval gates.
+    - Frontend: Next.js console at `/reliability` with System Health Grid, Subsystem Metrics, Sandbox Resource Telemetry, Model Gateway Resilience, Recovery Command Panel with interactive task resumption, and Unified Audit Event Stream.
+    - Tests: 6 unit tests in `test_reliability_service.py`, 6 integration tests in `test_reliability_api.py`.
+  - **Verification:** 261 backend tests passed (100% pass rate, 0 failed, 0 skipped); Next.js 16/16 routes compiled cleanly with 0 errors.
+
+---
+
+#### Phase 10: Advanced Repository Intelligence [COMPLETED]
+
+* **Stage 10.1: Cross-File Symbol and Dependency Graph Engine [COMPLETED]**
+  - **Deliverable:** Persistent, queryable cross-file symbol and dependency graph foundation mapping repositories, directories, files, classes, interfaces, functions, methods, and constants across languages with SHA-256 incremental indexing, bounded graph traversal, REST APIs, and an interactive Next.js visualizer.
+  - **Tasks Completed:**
+    - Designed and implemented SQLAlchemy models `RepositoryGraphNode` and `RepositoryGraphEdge` with 11 node types, 8 edge types, and 4 resolution statuses (`RESOLVED`, `EXTERNAL`, `UNRESOLVED`, `AMBIGUOUS`).
+    - Created and applied Alembic migration `012_repository_dependency_graph.py` with multi-column indexes and cascade deletion on PostgreSQL 16.
+    - Developed `GraphExtractor` in `backend/app/services/graph_builder.py` with Python `ast` visitor (classes, inheritance, methods, functions, docstrings, imports, calls) and `tree-sitter` bindings for JavaScript, TypeScript, TSX, Go, and Java (with syntactic regex fallback for Rust).
+    - Implemented `RepositoryGraphService` (`graph_service.py`) supporting full and incremental SHA-256 content-hash change detection, bounded BFS traversal ($1 \le d \le 5$), circular dependency protection, and repository isolation.
+    - Connected graph generation to `repo_intelligence_service.py` background repository indexing pipeline.
+    - Built comprehensive REST API endpoints under `/api/v1/repositories/{id}/graph` (`GET /`, `POST /index`, `GET /nodes`, `GET /nodes/{id}`, `GET /dependencies`, `GET /unresolved`).
+    - Built frontend Next.js Dependency Graph visualizer tab in `/repositories/[id]` with interactive SVG canvas (pan/zoom, radial distribution, node type pills, directional arrows), search filter, depth slider, side inspection drawer, and unresolved reference table.
+    - Authored 5 unit tests in `test_graph_engine.py` and 6 integration tests in `test_dependency_graph_api.py` with 100% pass rate.
+  - **Verification:** 269 backend tests passed (269 passed, 0 failed, 3 skipped); Next.js 16/16 routes compiled cleanly with 0 errors.
+
+* **Stage 10.2: Blast Radius and Change Impact Analysis Engine [COMPLETED]**
+  - **Deliverable:** Deterministic, explainable blast radius and change impact analysis engine using reverse dependency traversal over the persistent repository graph, path reconstruction, 0–100 impact severity scoring, test recommendation correlation, authenticated REST APIs, and an interactive Next.js visualizer tab.
+  - **Tasks Completed:**
+    - Designed and implemented Pydantic schemas in `backend/app/schemas/impact.py` (`ImpactTarget`, `DependencyHop`, `DependencyPathItem`, `ImpactedNodeItem`, `RecommendedTestItem`, `UnresolvedWarningItem`, `ImpactScoreBreakdown`, `ImpactSummaryMetrics`, `ImpactAnalysisRequest`, `ImpactAnalysisResponse`).
+    - Implemented `ImpactAnalysisService` (`impact_analysis_service.py`) supporting target resolution from file paths, symbol IDs, and qualified names; reverse BFS dependency traversal across valid consumer edge types (`IMPORTS`, `DEPENDS_ON`, `CALLS`, `INHERITS`, `IMPLEMENTS`, `REFERENCES`) while strictly excluding structural `CONTAINS` containers.
+    - Implemented explainable dependency path reconstruction with ordered breadcrumbs (`Consumer -[EDGE]-> Target`), distinguishing direct impact (depth 1) from transitive impact (depth > 1).
+    - Designed deterministic 0–100 impact scoring model based on 5 components (files, symbols, depth/reach, cross-module spread, and untested risk penalty) with severity bands (`CRITICAL`, `HIGH`, `MEDIUM`, `LOW`, `UNKNOWN`) and separate resolution confidence score ($0.0$ to $1.0$).
+    - Implemented test impact discovery correlating confirmed graph imports/calls (`CONFIRMED`, confidence $\ge 0.95$) with framework naming heuristics (`HEURISTIC`, confidence $0.75$).
+    - Built REST API endpoint `POST /api/v1/repositories/{id}/impact-analysis` with tenant isolation and graph staleness detection.
+    - Integrated blast radius intelligence into LangGraph specialist agents (`planner_node`, `code_reviewer_node`, `reporter_node`) in a non-blocking advisory manner.
+    - Built Next.js Impact Analysis visualizer tab (`impact-analysis-tab.tsx`) in `/repositories/[id]` with severity cards, score gauges, affected entity filters, breadcrumb path chains, and recommended test lists.
+    - Authored 4 unit tests in `test_impact_analysis.py` and 5 integration tests in `test_impact_analysis_api.py` with 100% pass rate.
+  - **Verification:** 278 backend tests passed (278 passed, 0 failed, 3 skipped); Next.js 16/16 routes compiled cleanly with 0 errors.
+
+* **Stage 10.3: Monorepo & Workspace Intelligence Engine + Mandatory Security Audit and Hardening [COMPLETED]**
+  - **Deliverable:** Multi-language monorepo discovery, persistent graph workspace/package modeling, cross-package dependency resolution, package-level blast radius analysis, complete secret audit & elimination of static pattern matching via dynamic synthetic fixtures, authenticated REST APIs, and an interactive Next.js Workspace Intelligence tab.
+  - **Tasks Completed:**
+    - **Part A (Mandatory Security Audit & Hardening):**
+      - Investigated GitHub Secret Scanning alert (`test_flaky_detector.py:228`); identified root cause as static synthetic fixture matching regex pattern `AIza[0-9A-Za-z-_]{35}`.
+      - Developed dynamic synthetic credential constructor (`tests/fixtures/synthetic_credentials.py`) ensuring zero static regex matches while preserving 100% redaction test fidelity.
+      - Refactored 9 test files to use dynamic fixtures; sanitized mock DB URLs in ML datasets and UI samples.
+      - Implemented repository-wide secret scanner (`backend/scripts/security_scanner.py`) with zero leakage in logs; verified 0 findings across repository.
+      - Configured GitHub Actions secret scanning automation (`.github/workflows/security.yml`).
+      - Created `docs/SECURITY_AUDIT_PHASE_10_STAGE_3.md` and authored 4 unit tests in `test_security_audit_and_hardening.py`.
+    - **Part B (Monorepo & Workspace Intelligence):**
+      - Implemented `MonorepoDetector` in `workspace_service.py` supporting 5 ecosystem families: JS/TS (npm, pnpm, yarn, turborepo, nx, lerna), Rust (Cargo), Java/Kotlin (Maven, Gradle), Go (go.work, multi-module), and Python (uv, poetry, pdm, subprojects).
+      - Extended persistent repository graph with `WORKSPACE` and `PACKAGE` nodes, and `WORKSPACE_CONTAINS`, `PACKAGE_CONTAINS`, `PACKAGE_DEPENDS_ON` edges.
+      - Cross-resolved package manifests into internal workspace dependencies vs external 3rd-party dependencies.
+      - Enhanced `ImpactAnalysisService` with package boundary resolution (`affected_packages`, `cross_package_boundaries`).
+      - Built authenticated REST APIs in `backend/app/api/v1/workspaces.py` (`GET /workspaces`, `GET /workspaces/{id}`, `GET /packages`, `GET /packages/{id}/dependencies`, `GET /packages/{id}/dependents`, `GET /packages/{id}/impact`, `POST /workspaces/index`).
+    - **Part C (Agent & Reliability Integration):**
+      - Enhanced `security_reviewer.py` with workspace manifest auditing and pre-screening diffs for credentials.
+      - Added `SecurityReliabilitySummary` and `security` subsystem health card to `/reliability`.
+    - **Part D (Next.js SaaS UI):**
+      - Created `frontend/src/services/workspace-service.ts`.
+      - Built `WorkspaceIntelligenceTab` (`workspace-intelligence-tab.tsx`) in `/repositories/[id]` with package directory, dependency inspector, and package blast radius calculator.
+      - Added Security & Secret Hygiene card to `/reliability`.
+    - **Tests & Verification:**
+      - 6 unit tests in `test_monorepo_detector.py`.
+      - 3 unit tests in `test_workspace_service.py`.
+      - 2 integration tests in `test_workspace_api.py`.
+      - 4 unit tests in `test_security_audit_and_hardening.py`.
+      - 5 unit tests in `test_impact_analysis.py`.
+      - 12 unit/integration tests in `test_reliability_service.py` & `test_reliability_api.py`.
+  - **Verification:** 294 backend tests passed (294 passed, 0 failed, 3 skipped); Next.js 16/16 routes compiled cleanly with 0 errors.
+
+* **Stage 10.4: Semantic Architecture & Pattern Inference Engine [COMPLETED]**
+  - **Deliverable:** Multi-modal hybrid repository search (Lexical + 768-dim pgvector Semantic + AST structural centrality) via Weighted Reciprocal Rank Fusion (RRF, k=60), empirical architectural pattern inference across 5 domains (18 patterns) with honest evidence statuses (`CONFIRMED`, `STRONGLY_SUPPORTED`, `POSSIBLE`, `INSUFFICIENT_EVIDENCE`), convention discovery, evidence-grounded 'Ask Your Codebase' Q&A, PostgreSQL persistence (`repository_architecture_patterns`, Alembic 013), and Next.js Architecture Intelligence console.
+  - **Tasks Completed:**
+    - **Part A (Mandatory Security Follow-up):**
+      - Investigated git history across commits; audited historical secret exposure introduced in commit `81439305`.
+      - Updated `backend/scripts/security_scanner.py` with `--scan-history` flag, deterministic exit codes (0 clean, 1 leak, 2 error), and zero leakage of raw secrets in logs.
+      - Authored `.gitleaks.toml` configuration with documentation allowlists.
+      - Calibrated `/reliability` posture: honest 95% hygiene score, `historical_exposure_detected: true`, explicit disclosure of unverified remote GitHub alert states.
+      - Created `docs/SECURITY_FOLLOWUP_PHASE_10_STAGE_4.md`.
+    - **Part B & G (Database Model & Migration):**
+      - Created SQLAlchemy model `RepositoryArchitecturePattern` in `backend/app/models/repository_architecture_pattern.py` with unique constraint `(repository_id, pattern_id)`.
+      - Authored and applied Alembic migration `013_architecture_patterns.py` to PostgreSQL 16.
+    - **Part C (Hybrid Semantic Repository Search):**
+      - Implemented `search_hybrid()` in `backend/app/services/search_service.py` combining Lexical matching (symbols, paths, content), Semantic retrieval (768-dim embeddings cosine similarity), and Structural topology (AST in/out degree centrality).
+      - Applied Weighted Reciprocal Rank Fusion ($k=60$) with explainable provenance and `scrub_credentials` snippet protection.
+      - Supported filters: `languages`, `packages`, `file_paths`, `symbol_types`, and pagination (`limit`, `offset`).
+    - **Part D (Architecture Pattern Inference & Conventions):**
+      - Implemented `ArchitectureInferenceService` in `backend/app/services/architecture_inference_service.py` evaluating 18 patterns across Application, Backend, Frontend, AI/Agent, and Data tiers.
+      - Enforced strict empirical status bands: `CONFIRMED` ($\ge 0.85$), `STRONGLY_SUPPORTED` ($0.70-0.84$), `POSSIBLE` ($0.40-0.69$), `INSUFFICIENT_EVIDENCE` ($< 0.40$). Never forced classifications without proof.
+      - Implemented Convention Discovery extracting service naming, REST API prefixing, dependency injection, exception hierarchies, and test suite partitioning.
+      - Implemented "Ask Your Codebase" natural-language Q&A grounded in multi-modal search evidence.
+    - **Part E (Agent Integration):**
+      - Enhanced `planner.py`, `code_reviewer.py`, and `state.py` to incorporate confirmed architecture patterns and coding conventions.
+    - **Part F (REST APIs & Frontend UI):**
+      - Built REST API endpoints in `backend/app/api/v1/architecture.py` (`POST /search/hybrid`, `GET /architecture`, `POST /architecture/analyze`, `GET /architecture/patterns`, `GET /architecture/patterns/{id}`, `GET /architecture/conventions`, `POST /architecture/ask`).
+      - Created `frontend/src/services/architecture-service.ts` and updated TypeScript types in `frontend/src/types/index.ts`.
+      - Built `ArchitectureIntelligenceTab` (`architecture-intelligence-tab.tsx`) in `/repositories/[id]` with Overview, Pattern Explorer, Conventions Guide, Hybrid Code Search, and Ask Your Codebase sub-views.
+    - **Tests & Verification:**
+      - 5 unit tests in `test_hybrid_search.py` (cosine similarity, language inference, RRF ranking, credential scrubbing, filtering & pagination).
+      - 5 unit tests in `test_architecture_inference.py` (status bands, pattern detection, insufficient evidence, convention discovery, grounded Q&A).
+      - 1 integration test in `test_architecture_api.py` (full API lifecycle, tenant isolation, 404 handling).
+  - **Verification:** 308 backend tests passed (308 passed, 0 failed, 3 skipped); Next.js 16/16 routes compiled cleanly with 0 errors; security scanner reports 0 leaks in working tree.
+
+* **Stage 10.5: Architectural Drift & Technical Debt Intelligence Engine [COMPLETED]**
+  - **Deliverable:** Continuous architectural drift detection engine evaluating code adherence against target patterns, circular dependencies, package encapsulation, and security boundaries; deterministic 0–100 technical debt scoring across 5 dimensions (complexity, duplication, dependency, test debt, maintainability); non-destructive advisory guarantee; PostgreSQL persistence (`repository_architecture_drift`, `repository_technical_debt`, Alembic revision `014_arch_drift_tech_debt`); LangGraph agent integration; 7 REST APIs; and Next.js Architecture Intelligence Drift & Technical Debt subtabs.
+  - **Tasks Completed:**
+    - **Part A (Mandatory Security Follow-up):**
+      - Investigated historical finding `backend/tests/unit/test_flaky_detector.py:228` from commit `81439305`; conclusively proved string is a synthetic non-functional test fixture.
+      - Disclosed external statuses honestly as `REMOTE_GITHUB_ALERT_STATUS_UNVERIFIED` and `PRODUCTION_IAM_STATUS_UNVERIFIED` due to lack of environment credentials.
+      - Ran 5-surface security scanner (0 leaks in working tree); maintained honest 95% hygiene score on `/reliability`.
+      - Authored `docs/SECURITY_FOLLOWUP_PHASE_10_STAGE_5.md`.
+    - **Part B & G (Database Models & Migration):**
+      - Created SQLAlchemy model `RepositoryArchitectureDrift` (Table 30) in `backend/app/models/repository_architecture_drift.py`.
+      - Created SQLAlchemy model `RepositoryTechnicalDebt` (Table 31) in `backend/app/models/repository_technical_debt.py`.
+      - Authored and applied Alembic migration `014_arch_drift_tech_debt.py` to PostgreSQL 16 (handled 32-character revision string length invariant).
+    - **Part C (Architecture Drift Service):**
+      - Implemented `ArchitectureDriftService` in `backend/app/services/architecture_drift_service.py` with 5 static detectors:
+        - Layering violations (`layering_violation`): API routes directly querying DB without delegating to service layer.
+        - Circular dependencies (`circular_dependency`): Mutual import/call cycles in dependency graph.
+        - Package boundary breaches (`package_boundary`): Cross-package access into private internal modules (`/internal/`, `_private.py`).
+        - Convention deviations (`convention_deviation`): Non-conforming service class naming and unversioned API routes.
+        - Security boundary bypasses (`security_boundary`): Direct third-party LLM calls bypassing `ModelGateway`.
+      - Implemented drift status aggregation: `HEALTHY`, `DRIFT_DETECTED`, and `CRITICAL_DRIFT`.
+    - **Part D (Technical Debt Service):**
+      - Implemented `TechnicalDebtService` in `backend/app/services/technical_debt_service.py` evaluating 5 dimensions:
+        - Complexity ($C$, 25%): Functions $> 60$ lines, classes $> 300$ lines.
+        - Duplication ($D$, 20%): Token-normalized duplicate functions (Type-2 clones).
+        - Dependency Debt ($P$, 20%): Unresolved graph edges and high fan-out coupling ($> 15$).
+        - Test Debt ($T$, 20%): Untested domain services and recorded flaky tests.
+        - Maintainability ($M$, 15%): TODO/FIXME accumulations and bare exception suppression (`except Exception: pass`).
+      - Deterministic 0–100 formula: $\text{Score} = \min(100.0, 0.25 C + 0.20 D + 0.20 P + 0.20 T + 0.15 M)$ with severity bands (`CLEAN`, `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`).
+      - Non-destructive advisory guarantee: Evaluates and exposes metrics without mutating code or initiating refactors.
+    - **Part E (Agent Integration):**
+      - Extended `DevoraWorkflowState` with `architecture_drift` and `technical_debt` fields in `backend/app/agents/state.py`.
+      - Injected drift and debt context into `planner.py`, `code_reviewer.py`, `security_reviewer.py`, and `reporter.py`.
+    - **Part F (REST APIs):**
+      - Added 7 REST endpoints in `backend/app/api/v1/architecture.py` (`GET /drift`, `POST /drift/analyze`, `GET /technical-debt`, `POST /technical-debt/analyze`, `GET /technical-debt/findings`, `GET /technical-debt/findings/{id}`, `GET /technical-debt/trends`).
+    - **Part H (Frontend UI):**
+      - Added TypeScript interfaces in `frontend/src/types/index.ts`.
+      - Added client methods in `frontend/src/services/architecture-service.ts`.
+      - Built interactive Architecture Drift and Technical Debt views with severity filters, progress gauges, findings explorer, and historical trends in `ArchitectureIntelligenceTab` (`architecture-intelligence-tab.tsx`).
+    - **Tests & Verification:**
+      - 6 unit tests in `test_architecture_drift.py` (status resolution, layering, cycles, boundaries, conventions, security bypasses).
+      - 5 unit tests in `test_technical_debt.py` (formula & bands, complexity, duplication, maintainability, test debt).
+      - 1 integration test in `test_architecture_drift_api.py` (full API lifecycle, 7 endpoints, multi-tenant isolation).
+  - **Verification:** 320 backend tests passed (320 passed, 0 failed, 3 skipped); Next.js 16/16 routes compiled cleanly with 0 errors; security scanner reports 0 leaks in working tree.
+
+* **Stage 10.6: Architecture-Aware Refactoring & Safe Remediation Engine [COMPLETED]**
+  - **Deliverable:** Architecture-aware refactoring recommendation engine grounded in verified drift, debt, and dependency graph findings across 6 categories (layering, dependency, duplication, complexity, convention, testability); topologically ordered DAG implementation plan generation; deterministic risk scoring (0-100) and approval gating; cryptographic SHA-256 diff-hash binding with automatic invalidation upon working tree drift; isolated task sandbox execution with dual-pass behavioral preservation checks and automated rollback on regression; specialist agent integration (`planner`, `code_reviewer`, `security_reviewer`, `reporter`); PostgreSQL persistence (`repository_refactoring_plans`, `refactoring_executions`, Alembic revision `015_refactoring_engine`); 9 REST APIs; and interactive Next.js Safe Refactoring visualizer (`RefactoringIntelligenceTab`).
+  - **Tasks Completed:**
+    - **Part A (Pre-Implementation Audit & Hardening):**
+      - Audited Stage 10.5 baseline across all 8 criteria; hardened `is_stale` calculation on drift and debt summaries.
+      - Explicitly classified test debt as `CONFIRMED_ABSENT` vs `UNKNOWN_COVERAGE`.
+      - Authored `docs/PHASE_10_STAGE_6_IMPLEMENTATION_PLAN.md`.
+    - **Part B & G (Database Models & Migration):**
+      - Created SQLAlchemy model `RefactoringPlan` (Table 32) in `backend/app/models/refactoring_plan.py`.
+      - Created SQLAlchemy model `RefactoringExecution` (Table 33) in `backend/app/models/refactoring_execution.py`.
+      - Authored and applied Alembic migration `015_refactoring_engine.py` to PostgreSQL 16 (revision string `015_refactoring_engine` safely $< 32$ characters).
+    - **Part C (Refactoring Recommendation & Risk Engine):**
+      - Implemented `ArchitectureAwareRefactoringService` in `backend/app/services/refactoring_service.py` across 6 categories.
+      - Implemented deterministic recommendation IDs using stable hash digests (`hashlib.md5(f"{finding_id}:{fpath}".encode())`).
+      - Implemented topological DAG step decomposition (`EXTRACT_SERVICE`, `DELEGATE_CALL`, `BREAK_CYCLE`, `CONSOLIDATE_DUPLICATE`, `DECOMPOSE_FUNCTION`, `ALIGN_NAMING`, `ADD_TEST`).
+      - Implemented deterministic plan risk scoring formula ($0-100$) and risk level bands (`LOW`, `MEDIUM`, `HIGH`) with mandatory human approval gating for high risk, multi-package, or security-sensitive plans.
+    - **Part D (Human Approval & Cryptographic Diff Binding):**
+      - Bound approval to exact SHA-256 diff hash.
+      - Enforced diff-hash invalidation check: any divergence between approved hash and current execution diff raises 400 Bad Request, marks plan `INVALIDATED`, and aborts execution.
+    - **Part E (Safe Execution, Behavioral Preservation & Rollback):**
+      - Implemented isolated task workspace execution with dual-pass test execution (baseline pass count vs post-refactor pass count) and public API parity validation.
+      - Automated rollback to pristine commit SHA if tests fail or regressions occur.
+      - Implemented before/after comparison delta telemetry (`get_comparison`).
+    - **Part F (Specialist Agent Workflow Integration):**
+      - Extended `DevoraWorkflowState` with `refactoring_plan` and `refactoring_execution`.
+      - Integrated refactoring context into `planner.py`, `code_reviewer.py`, `security_reviewer.py`, and `reporter.py`.
+    - **Part H (REST APIs & Frontend UI):**
+      - Implemented 9 REST endpoints in `backend/app/api/v1/refactoring.py`.
+      - Registered refactoring router in `backend/app/api/v1/router.py`.
+      - Added TypeScript interfaces in `frontend/src/types/index.ts`.
+      - Implemented client API service in `frontend/src/services/refactoring-service.ts`.
+      - Built interactive `RefactoringIntelligenceTab` in `frontend/src/components/repository/refactoring-intelligence-tab.tsx` and mounted in repository detail page.
+    - **Part I (Tests & Verification):**
+      - 5 unit tests in `test_refactoring_service.py` (deterministic risk formula, topological DAG steps, approval diff-hash binding, diff divergence invalidation, execution & comparison delta).
+      - 1 integration test in `test_refactoring_api.py` (complete 9-step API lifecycle, reject flow, invalidation flow, comparison endpoint, multi-tenant isolation).
+      - Zero regressions: 323 passed, 0 failed, 3 skipped across full backend test suite.
+      - Frontend: 16/16 routes compiled cleanly with 0 TypeScript/ESLint errors.
+      - Security: 100% clean working tree (0 secret exposures).
+    - **Part J (Security Audit & Documentation):**
+      - Authored `docs/SECURITY_FOLLOWUP_PHASE_10_STAGE_6.md`.
+      - Updated `docs/ARCHITECTURE.md` (Section 21), `docs/API.md` (Section 3.19), `docs/DATABASE.md` (Tables 32 & 33, Migration 015).
+      - Authored `docs/PHASE_10_STAGE_6_IMPLEMENTATION_REPORT.md`.
+
+* **Stage 10.7: Autonomous Engineering Intelligence Evaluation & Benchmarking Engine [COMPLETED]**
+  - **Deliverable:** Centralized empirical benchmarking engine measuring autonomous engineering capabilities across 7 canonical categories; ground-truth dataset registry of 31 scenarios; deterministic multi-type evaluation engines (`EXACT_MATCH`, `STRUCTURAL`, `AST_DELTA`, `TEST_ASSERTION`, `SECURITY_POLICY`); normalized 0–100 weighted scoring formula; immutable Critical Safety Override; Expected Calibration Error (ECE) measurement; historical run comparison with automated regression detection; PostgreSQL persistence (`benchmark_scenarios`, `benchmark_suite_runs`, `benchmark_scenario_results`, `benchmark_regressions`, Alembic revision `016_benchmark_engine`); 12 authenticated REST APIs; and interactive Next.js Benchmark Intelligence Console (`/benchmarks`).
+  - **Tasks Completed:**
+    - **Part A (Pre-Implementation Audit of Stage 10.6):**
+      - Audited Stage 10.6 refactoring engine across A1–A5; hardened active rollback triggers for test regressions, explicit test identity delta tracking, and cryptographic diff-hash binding to repository revision SHA.
+      - Authored `docs/PHASE_10_STAGE_6_FINAL_AUDIT.md`.
+    - **Part B & G (Database Models & Migration):**
+      - Created SQLAlchemy model `BenchmarkScenario` (Table 34) in `backend/app/models/benchmark_engine.py`.
+      - Created SQLAlchemy model `BenchmarkSuiteRun` (Table 35) in `backend/app/models/benchmark_engine.py`.
+      - Created SQLAlchemy model `BenchmarkScenarioResult` (Table 36) in `backend/app/models/benchmark_engine.py`.
+      - Created SQLAlchemy model `BenchmarkRegression` (Table 37) in `backend/app/models/benchmark_engine.py`.
+      - Authored and applied Alembic migration `016_benchmark_engine.py` (22 characters, compliant with PostgreSQL `VARCHAR(32)` limits).
+    - **Part C (Benchmark Dataset Registry):**
+      - Implemented `backend/app/services/benchmark_dataset.py` containing 31 canonical ground-truth scenarios distributed across all 7 categories (Bug Detection: 5, Repo Understanding: 5, Architecture Intelligence: 4, Impact Analysis: 4, Refactoring: 5, Multi-Agent: 4, Security & Safety: 4).
+    - **Part D (Evaluation & Scoring Engine):**
+      - Implemented `BenchmarkEvaluator` supporting 5 distinct evaluation paradigms.
+      - Implemented `BenchmarkScoringService` with canonical weights: $0.30 \cdot F_{\text{correct}} + 0.15 \cdot R_{\text{under}} + 0.15 \cdot A_{\text{intel}} + 0.15 \cdot S_{\text{refact}} + 0.15 \cdot S_{\text{sec}} + 0.05 \cdot O_{\text{rel}} + 0.05 \cdot E_{\text{eff}}$.
+      - Implemented Critical Safety Override: any Category G failure immediately forces run status to `CRITICAL_SAFETY_FAILURE` and score to 0.0.
+      - Implemented Expected Calibration Error (ECE) calculation: $\frac{1}{N} \sum |c_i - a_i|$.
+    - **Part E (Historical Comparison & Regression Detection):**
+      - Implemented `BenchmarkComparisonService` detecting score drops ($>5$ pts) and safety breaches.
+      - Classified regressions into `CRITICAL`, `HIGH`, `MEDIUM`, and `LOW` severities with regression types (`ACCURACY_DROP`, `LATENCY_SPIKE`, `SAFETY_BREACH`, `INVARIANT_FAILURE`).
+    - **Part F (Audit-Ready Reporting):**
+      - Implemented `BenchmarkReportService` producing comprehensive, audit-ready Markdown evaluation reports.
+    - **Part H (REST APIs & Next.js Console):**
+      - Mounted 12 REST endpoints under `/api/v1/benchmarks` in `backend/app/api/v1/benchmarks.py`.
+      - Created client API service in `frontend/src/services/benchmark-service.ts` and updated TypeScript interfaces in `frontend/src/types/index.ts`.
+      - Built interactive Next.js console in `frontend/src/app/benchmarks/page.tsx` with Executive Overview, Dataset Registry, Results Explorer, Historical Run Comparisons, Safety Audit Invariants, and Report Modal.
+      - Added navigation item in platform sidebar (`frontend/src/components/layout/sidebar.tsx`).
+    - **Part I & J (Testing & Verification):**
+      - 6 unit tests in `test_benchmark_engine.py` (dataset distribution, exact match, security policy, weights, safety override, calibration error).
+      - 1 integration test in `test_benchmark_api.py` (12-endpoint lifecycle, safety breach simulation, comparison).
+      - 1 comprehensive end-to-end test in `test_benchmark_e2e.py` demonstrating all 10 required evaluation flows.
+      - Zero regressions: 332 passed, 0 failed, 3 skipped across full backend test suite.
+      - Frontend: 17/17 routes compiled cleanly with 0 errors.
+      - Security: 100% clean working tree (0 secret exposures).
+    - **Documentation Deliverables:**
+      - Authored `docs/PHASE_10_STAGE_7_BENCHMARK_METHODOLOGY.md`.
+      - Authored `docs/PHASE_10_STAGE_7_DATASET_REFERENCE.md`.
+      - Authored `docs/PHASE_10_STAGE_7_IMPLEMENTATION_REPORT.md`.
+      - Authored `docs/PHASE_10_FINAL_COMPLETION_REPORT.md`.
+      - Updated `docs/ARCHITECTURE.md` (Section 22), `docs/API.md` (Section 3.20), `docs/DATABASE.md` (Tables 34-37, Migration 016).
+
+---
 
 ### 3. Missing Decisions & Technical Risks Analysis
 

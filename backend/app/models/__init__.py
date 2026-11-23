@@ -28,6 +28,19 @@ from app.models.github_pull_request import GitHubPullRequest
 from app.models.git_branch import GitBranch
 from app.models.flaky_test_record import FlakyTestRecord
 from app.models.model_gateway_health import ModelGatewayHealth
+from app.models.repository_graph_node import RepositoryGraphNode
+from app.models.repository_graph_edge import RepositoryGraphEdge
+from app.models.repository_architecture_pattern import RepositoryArchitecturePattern
+from app.models.repository_architecture_drift import RepositoryArchitectureDrift
+from app.models.repository_technical_debt import RepositoryTechnicalDebt
+from app.models.refactoring_plan import RefactoringPlan
+from app.models.refactoring_execution import RefactoringExecution
+from app.models.benchmark_engine import (
+    BenchmarkScenario,
+    BenchmarkSuiteRun,
+    BenchmarkScenarioResult,
+    BenchmarkRegression,
+)
 
 __all__ = [
     "Base",
@@ -60,5 +73,16 @@ __all__ = [
     "GitBranch",
     "FlakyTestRecord",
     "ModelGatewayHealth",
+    "RepositoryGraphNode",
+    "RepositoryGraphEdge",
+    "RepositoryArchitecturePattern",
+    "RepositoryArchitectureDrift",
+    "RepositoryTechnicalDebt",
+    "RefactoringPlan",
+    "RefactoringExecution",
+    "BenchmarkScenario",
+    "BenchmarkSuiteRun",
+    "BenchmarkScenarioResult",
+    "BenchmarkRegression",
 ]
 

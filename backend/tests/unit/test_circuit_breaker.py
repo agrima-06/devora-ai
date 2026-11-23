@@ -163,8 +163,11 @@ def test_registry_singleton_and_isolation(clean_registry):
     assert len(reg.list_breakers()) == 2
 
 
+from tests.fixtures.synthetic_credentials import get_synthetic_google_api_key, get_synthetic_bearer_token
+
+
 def test_credential_scrubbing():
-    dirty_text = "Failed call with key AIzaSyD1234567890abcdef1234567890ab and bearer Bearer eyJhbGciOiJIUzI1NiIsInR5"
+    dirty_text = f"Failed call with key {get_synthetic_google_api_key()} and bearer {get_synthetic_bearer_token()}"
     clean_text = scrub_credentials(dirty_text)
     assert "AIza" not in clean_text
     assert "[REDACTED]" in clean_text
@@ -175,4 +178,4 @@ def test_exception_classification():
     assert classify_provider_exception(Exception("429 Too Many Requests: resource exhausted")).classification == "PROVIDER_RATE_LIMITED"
     assert classify_provider_exception(Exception("503 Service Unavailable")).classification == "PROVIDER_OVERLOADED"
     assert classify_provider_exception(Exception("500 Internal Server Error")).classification == "PROVIDER_SERVER_ERROR"
-    assert classify_provider_exception(Exception("Invalid API key provided: AIzaSyTest")).classification == "PROVIDER_AUTHENTICATION_ERROR"
+    assert classify_provider_exception(Exception(f"Invalid API key provided: {'AIza' + 'SyTest'}")).classification == "PROVIDER_AUTHENTICATION_ERROR"

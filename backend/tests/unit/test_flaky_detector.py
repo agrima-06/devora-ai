@@ -220,13 +220,18 @@ def test_extract_identifier_cargo_test(detector: FlakyTestDetector):
 # ---------------------------------------------------------------------------
 # 4. Credential Sanitization
 # ---------------------------------------------------------------------------
+from tests.fixtures.synthetic_credentials import (
+    get_synthetic_google_api_key,
+    get_synthetic_github_pat,
+    get_synthetic_bearer_token,
+)
 
 
 def test_sanitize_record_history(detector: FlakyTestDetector):
     history = [
-        {"run_index": 1, "error_preview": "Failed with token ghp_123456789012345678901234567890123456"},
-        {"run_index": 2, "error_preview": "Failed with key AIzaSyD12345678901234567890123456789012"},
-        {"run_index": 3, "error_preview": "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.test"},
+        {"run_index": 1, "error_preview": f"Failed with token {get_synthetic_github_pat()}"},
+        {"run_index": 2, "error_preview": f"Failed with key {get_synthetic_google_api_key()}"},
+        {"run_index": 3, "error_preview": f"Authorization: {get_synthetic_bearer_token()}"},
     ]
     cleaned = detector._sanitize_record_history(history)
     for c in cleaned:

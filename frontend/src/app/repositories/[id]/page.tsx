@@ -28,6 +28,8 @@ import {
   ChevronRight,
   BookOpen,
   CheckCircle2,
+  Flame,
+  Wrench,
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
@@ -38,8 +40,13 @@ import { repositoryService } from "@/services/repository-service";
 import { githubService } from "@/services/github-service";
 import { taskService } from "@/services/task-service";
 import { formatDate } from "@/lib/utils";
+import { DependencyGraphTab } from "@/components/repository/dependency-graph-tab";
+import { ImpactAnalysisTab } from "@/components/repository/impact-analysis-tab";
+import { WorkspaceIntelligenceTab } from "@/components/repository/workspace-intelligence-tab";
+import { ArchitectureIntelligenceTab } from "@/components/repository/architecture-intelligence-tab";
+import { RefactoringIntelligenceTab } from "@/components/repository/refactoring-intelligence-tab";
 
-type ActiveTab = "architecture" | "search" | "files" | "tasks" | "branches" | "pull_requests";
+type ActiveTab = "architecture" | "refactoring" | "graph" | "impact" | "workspaces" | "search" | "files" | "tasks" | "branches" | "pull_requests";
 
 export default function RepositoryDetailPage() {
   const params = useParams();
@@ -349,6 +356,54 @@ export default function RepositoryDetailPage() {
           </button>
 
           <button
+            onClick={() => setActiveTab("refactoring")}
+            className={`pb-3 px-3 flex items-center gap-2 border-b-2 transition-colors ${
+              activeTab === "refactoring"
+                ? "border-primary text-foreground font-semibold"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Wrench className="w-4 h-4 text-cyan-400" />
+            <span>Safe Refactoring</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("graph")}
+            className={`pb-3 px-3 flex items-center gap-2 border-b-2 transition-colors ${
+              activeTab === "graph"
+                ? "border-primary text-foreground font-semibold"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Boxes className="w-4 h-4" />
+            <span>Dependency Graph</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("impact")}
+            className={`pb-3 px-3 flex items-center gap-2 border-b-2 transition-colors ${
+              activeTab === "impact"
+                ? "border-primary text-foreground font-semibold"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Flame className="w-4 h-4 text-orange-400" />
+            <span>Blast Radius & Impact</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("workspaces")}
+            className={`pb-3 px-3 flex items-center gap-2 border-b-2 transition-colors ${
+              activeTab === "workspaces"
+                ? "border-primary text-foreground font-semibold"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Boxes className="w-4 h-4 text-emerald-400" />
+            <span>Workspaces & Packages</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab("search")}
             className={`pb-3 px-3 flex items-center gap-2 border-b-2 transition-colors ${
               activeTab === "search"
@@ -409,114 +464,29 @@ export default function RepositoryDetailPage() {
           </button>
         </div>
 
-        {/* Tab 1: Architecture & Conventions */}
+        {/* Tab 1: Architecture Intelligence & Patterns */}
         {activeTab === "architecture" && (
-          <div className="space-y-6">
-            {!isIndexed && (
-              <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Database className="w-5 h-5 text-amber-400" />
-                  <div>
-                    <h4 className="text-sm font-semibold text-amber-300">Repository Not Yet Indexed</h4>
-                    <p className="text-xs text-amber-400/80">
-                      Run repository indexing to extract architectural patterns, entry points, and coding conventions.
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={() => indexMutation.mutate()}
-                  disabled={isIndexing}
-                  className="bg-amber-600 hover:bg-amber-500 text-white font-mono text-xs"
-                >
-                  {isIndexing ? "Indexing..." : "Index Now"}
-                </Button>
-              </div>
-            )}
+          <ArchitectureIntelligenceTab repositoryId={repoId} />
+        )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Architecture Summary */}
-              <Card className="bg-card/40 border-border">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2 text-foreground">
-                    <BookOpen className="w-4 h-4 text-primary" />
-                    <span>Synthesized Architecture Summary</span>
-                  </CardTitle>
-                  <CardDescription className="text-xs font-mono">
-                    Extracted from directory structure, manifests, and primary entry points
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <pre className="p-4 rounded-lg bg-secondary/50 border border-border text-xs font-mono text-foreground whitespace-pre-wrap leading-relaxed overflow-x-auto">
-                    {architecture?.architecture_summary || "No architectural summary available yet."}
-                  </pre>
+        {/* Tab: Architecture-Aware Safe Refactoring (Stage 10.6) */}
+        {activeTab === "refactoring" && (
+          <RefactoringIntelligenceTab repositoryId={repoId} />
+        )}
 
-                  {architecture?.entry_points && architecture.entry_points.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-xs font-mono uppercase text-muted-foreground font-semibold">
-                        Identified Entry Points
-                      </h4>
-                      <div className="flex flex-wrap gap-1.5">
-                        {architecture.entry_points.map((ep) => (
-                          <Badge key={ep} variant="outline" className="font-mono text-xs">
-                            {ep}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+        {/* Tab: Dependency Graph */}
+        {activeTab === "graph" && (
+          <DependencyGraphTab repositoryId={repoId} />
+        )}
 
-                  {architecture?.manifests && architecture.manifests.length > 0 && (
-                    <div className="space-y-2">
-                      <h4 className="text-xs font-mono uppercase text-muted-foreground font-semibold">
-                        Dependency Manifests
-                      </h4>
-                      <div className="flex flex-wrap gap-1.5">
-                        {architecture.manifests.map((m) => (
-                          <Badge key={m} variant="secondary" className="font-mono text-xs">
-                            {m}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+        {/* Tab: Blast Radius & Impact Analysis */}
+        {activeTab === "impact" && (
+          <ImpactAnalysisTab repositoryId={repoId} />
+        )}
 
-              {/* Conventions and Practices */}
-              <Card className="bg-card/40 border-border">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2 text-foreground">
-                    <Shield className="w-4 h-4 text-primary" />
-                    <span>Coding Conventions & Practices</span>
-                  </CardTitle>
-                  <CardDescription className="text-xs font-mono">
-                    Synthesized guidelines for test runners, configuration, and coding patterns
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <pre className="p-4 rounded-lg bg-secondary/50 border border-border text-xs font-mono text-foreground whitespace-pre-wrap leading-relaxed overflow-x-auto">
-                    {architecture?.coding_conventions || "No conventions extracted yet."}
-                  </pre>
-
-                  <div className="p-4 rounded-lg border border-border/60 bg-secondary/20 space-y-2 text-xs font-mono">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Clone URL:</span>
-                      <span className="text-foreground break-all">{repository.clone_url}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Default Branch:</span>
-                      <span className="text-foreground">{repository.default_branch}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Last Indexed:</span>
-                      <span className="text-foreground">{formatDate(repository.last_indexed_at)}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+        {/* Tab: Monorepo & Workspaces Intelligence */}
+        {activeTab === "workspaces" && (
+          <WorkspaceIntelligenceTab repositoryId={repoId} />
         )}
 
         {/* Tab 2: Code Search */}

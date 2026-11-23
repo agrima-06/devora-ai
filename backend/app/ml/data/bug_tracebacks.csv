@@ -484,7 +484,7 @@ runtime_logic_error,OverflowError: int too large to convert to float,"Traceback 
 OverflowError: int too large to convert to float",Arithmetic exponent overflow beyond double precision limit
 database_network_error,asyncpg.exceptions.CannotConnectNowError: connection to server on socket failed: Connection refused,"Traceback (most recent call last):
   File ""/workspace/app/db/session.py"", line 55, in get_session
-    conn = await asyncpg.connect(""postgresql://postgres:secret@localhost:5432/devora"")
+    conn = await asyncpg.connect(""postgresql://postgres@localhost:5432/devora"")
 asyncpg.exceptions.CannotConnectNowError: connection to server on socket ""/tmp/.s.PGSQL.5432"" failed: Connection refused",PostgreSQL service daemon is not running or listening on target port
 database_network_error,sqlalchemy.exc.IntegrityError: (sqlalchemy.dialects.postgresql.asyncpg.IntegrityError) duplicate key value violates unique constraint 'uq_users_email',"Traceback (most recent call last):
   File ""/workspace/app/services/user_service.py"", line 42, in register

@@ -93,9 +93,12 @@ def test_parse_memory_to_bytes():
     assert parse_memory_to_bytes("invalid") is None
 
 
+from tests.fixtures.synthetic_credentials import get_synthetic_google_api_key, get_synthetic_github_pat
+
+
 def test_sanitize_output_strips_secrets():
     """Sensitive GitHub tokens and API keys must be redacted in output."""
-    raw = "Failed with ghp_1234567890abcdefghijklmnopqrstuvwxyz and AIzaSyD1234567890abcdefghijklmnopqr"
+    raw = f"Failed with {get_synthetic_github_pat()} and {get_synthetic_google_api_key()}"
     sanitized = sanitize_output(raw)
     assert "ghp_" not in sanitized
     assert "[REDACTED_GITHUB_TOKEN]" in sanitized

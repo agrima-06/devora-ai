@@ -41,15 +41,21 @@ def dummy_task():
 # ---------------------------------------------------------------------------
 # 1. Secret Sanitization & Serialization Tests
 # ---------------------------------------------------------------------------
+from tests.fixtures.synthetic_credentials import (
+    get_synthetic_google_api_key,
+    get_synthetic_github_pat,
+    get_synthetic_bearer_token,
+)
 
 
 def test_sanitize_state_blob_masks_github_tokens():
+    raw_pat = get_synthetic_github_pat()
     raw = {
-        "token": "ghp_1234567890abcdefghijklmnopqrstuvwxyz",
-        "remote_url": "https://x-access-token:ghp_1234567890abcdefghijklmnopqrstuvwxyz@github.com/org/repo.git",
+        "token": raw_pat,
+        "remote_url": f"https://x-access-token:{raw_pat}@github.com/org/repo.git",
         "nested": {
-            "api_key": "AIzaSyD-1234567890abcdefghijklmnopqr",
-            "auth": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.payload.sig",
+            "api_key": get_synthetic_google_api_key(),
+            "auth": get_synthetic_bearer_token(),
         },
     }
     sanitized = sanitize_state_blob(raw)

@@ -201,6 +201,13 @@ class DevoraWorkflowState(TypedDict, total=False):
     problem_analysis: Optional[Dict[str, Any]]
     root_cause_analysis: Optional[Dict[str, Any]]
     implementation_plan: Optional[Dict[str, Any]]
+    impact_analysis: Optional[Dict[str, Any]]
+    architecture_patterns: Optional[List[Dict[str, Any]]]
+    architecture_conventions: Optional[List[Dict[str, Any]]]
+    architecture_drift: Optional[Dict[str, Any]]
+    technical_debt: Optional[Dict[str, Any]]
+    refactoring_plan: Optional[Dict[str, Any]]
+    refactoring_execution: Optional[Dict[str, Any]]
 
     # Coding & Changes
     proposed_file_changes: List[Dict[str, Any]]

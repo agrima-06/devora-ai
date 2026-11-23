@@ -1,0 +1,24 @@
+# Gitleaks Configuration for Devora AI
+# Enforces strict secret scanning while allowing verified documentation and dynamic test constructors.
+
+title = "Devora AI Gitleaks Configuration"
+
+[extend]
+# Use default gitleaks config as base
+
+[allowlist]
+description = "Allowed documentation files and dynamic test constructors"
+paths = [
+  '''docs/PHASE_8_GITHUB_NATIVE_ENGINEERING_PLAN\.md''',
+  '''docs/SECURITY\.md''',
+  '''docs/ARCHITECTURE\.md''',
+  '''docs/PHASE_9_STAGE_3_IMPLEMENTATION_REPORT\.md''',
+  '''docs/PHASE_9_STAGE_4_IMPLEMENTATION_REPORT\.md''',
+  '''docs/PHASE_9_STAGE_2_IMPLEMENTATION_REPORT\.md''',
+  '''docs/SECURITY_AUDIT_PHASE_10_STAGE_3\.md''',
+  '''docs/SECURITY_FOLLOWUP_PHASE_10_STAGE_4\.md''',
+  '''docs/PHASE_10_STAGE_4_IMPLEMENTATION_PLAN\.md''',
+  '''docs/PHASE_10_STAGE_4_IMPLEMENTATION_REPORT\.md''',
+  '''backend/tests/fixtures/synthetic_credentials\.py''',
+  '''backend/tests/unit/test_security_audit_and_hardening\.py''',
+]

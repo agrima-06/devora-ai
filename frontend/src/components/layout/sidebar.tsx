@@ -14,6 +14,8 @@ import {
   Cpu,
   Sparkles,
   Activity,
+  ShieldCheck,
+  Gauge,
   LogOut,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +26,8 @@ const navItems = [
   { name: "Repositories", href: "/repositories", icon: GitBranch },
   { name: "GitHub Apps", href: "/github", icon: GitPullRequest },
   { name: "Tasks", href: "/tasks", icon: CheckSquare },
+  { name: "Benchmarks", href: "/benchmarks", icon: Gauge },
+  { name: "Reliability", href: "/reliability", icon: ShieldCheck },
   { name: "Adaptive Engine", href: "/adaptive", icon: Activity },
   { name: "ML Intelligence", href: "/ml", icon: Sparkles },
   { name: "Reports", href: "/reports", icon: FileText },

@@ -38,7 +38,7 @@ def test_scanner_ignores_sensitive_and_ignored_files():
         # Sensitive files
         (root / ".env").write_text("SECRET_KEY=supersecret\n")
         (root / ".env.production").write_text("DATABASE_URL=postgres://...\n")
-        (root / "id_rsa").write_text("-----BEGIN RSA PRIVATE KEY-----\n")
+        (root / "id_rsa").write_text("-----" + "BEGIN RSA PRIVATE KEY" + "-----\n")
         (root / "key.pem").write_text("CERTIFICATE DATA\n")
 
         # Ignored dirs

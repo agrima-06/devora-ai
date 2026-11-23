@@ -18,6 +18,7 @@ from app.models.repository_knowledge import RepositoryKnowledge
 from app.models.repository_memory import RepositoryMemory
 from app.models.user import User
 from app.services.github_service import GitHubService
+from app.services.graph_service import RepositoryGraphService
 from app.services.parser_service import CodeParserService
 from app.services.scanner_service import RepositoryScanner
 
@@ -57,10 +58,12 @@ class RepositoryIntelligenceService:
         github_service: Optional[GitHubService] = None,
         scanner: Optional[RepositoryScanner] = None,
         parser: Optional[CodeParserService] = None,
+        graph_service: Optional[RepositoryGraphService] = None,
     ):
         self.github_service = github_service or GitHubService()
         self.scanner = scanner or RepositoryScanner()
         self.parser = parser or CodeParserService()
+        self.graph_service = graph_service or RepositoryGraphService(scanner=self.scanner)
 
     async def index_repository(
         self,
@@ -270,6 +273,19 @@ class RepositoryIntelligenceService:
             db.add_all(file_records)
             db.add_all(knowledge_records)
             db.add_all(memory_records)
+
+            # 7b. Index Cross-File Symbol and Dependency Graph (Phase 10 Stage 10.1)
+            try:
+                await self.graph_service.index_repository_graph(
+                    repository_id=repo.id,
+                    user=user,
+                    db=db,
+                    workspace_path=workspace_path,
+                    commit_sha=commit_sha,
+                    force_reindex=force_reindex,
+                )
+            except Exception as graph_err:
+                logger.warning("graph_indexing_warning", repo_id=str(repo.id), error=str(graph_err))
 
             # 8. Complete job and update repository status
             job.status = "COMPLETED"
